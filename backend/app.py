@@ -1,9 +1,14 @@
+from modules.chatbot import OpenAIChatbot
 from flask import Flask, jsonify, request
+from dotenv import load_dotenv
 from flask_cors import CORS
 import os
 import jwt
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
+import logging
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -135,15 +140,12 @@ def echo():
 def chat():
     """Simulate a chat response"""
     data = request.json
-    user_message = data.get('message', '')
-
-    # In a real app, this would call an actual chat service
+    prompt = data.get('message', '')
+    chatbot = OpenAIChatbot()
     response = {
-        "id": "response-" + str(len(sample_messages) + 1),
         "role": "assistant",
-        "content": f"You said: '{user_message}'. This is a simulated response from the backend API."
+        "content": chatbot.generate_response(prompt)
     }
-
     return jsonify({"response": response})
 
 if __name__ == '__main__':
