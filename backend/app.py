@@ -6,7 +6,6 @@ import os
 import jwt
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
-import logging
 
 load_dotenv()
 
@@ -35,34 +34,34 @@ def health_check():
 def register():
     """Register a new user"""
     data = request.json
-    
+
     # Validate input
     if not data or not data.get('email') or not data.get('password') or not data.get('name'):
         return jsonify({
             "status": "error",
             "message": "Missing required fields: email, password, name"
         }), 400
-    
+
     email = data.get('email')
     name = data.get('name')
-    
+
     # Check if user already exists
     if email in users_db:
         return jsonify({
             "status": "error",
             "message": "User with this email already exists"
         }), 409
-    
+
     # Hash the password before storing
     hashed_password = generate_password_hash(data.get('password'))
-    
+
     # Store new user
     users_db[email] = {
         'name': name,
         'password': hashed_password,
         'created_at': datetime.utcnow().isoformat()
     }
-    
+
     return jsonify({
         "status": "success",
         "message": "User registered successfully",
@@ -76,33 +75,33 @@ def register():
 def login():
     """Login a user"""
     data = request.json
-    
+
     # Validate input
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({
             "status": "error",
             "message": "Missing required fields: email, password"
         }), 400
-    
+
     email = data.get('email')
     password = data.get('password')
-    
+
     # Check if user exists
     if email not in users_db:
         return jsonify({
             "status": "error",
             "message": "Invalid email or password"
         }), 401
-    
+
     user = users_db[email]
-    
+
     # Verify password
     if not check_password_hash(user['password'], password):
         return jsonify({
             "status": "error",
             "message": "Invalid email or password"
         }), 401
-    
+
     # Generate JWT token
     token_expiry = datetime.utcnow() + timedelta(hours=24)
     token = jwt.encode({
@@ -110,7 +109,7 @@ def login():
         'name': user['name'],
         'exp': token_expiry
     }, app.config['SECRET_KEY'])
-    
+
     return jsonify({
         "status": "success",
         "message": "Login successful",
@@ -141,10 +140,11 @@ def chat():
     """Simulate a chat response"""
     data = request.json
     prompt = data.get('message', '')
+    user = data.get('user', '').get('email', '')
     chatbot = OpenAIChatbot()
     response = {
         "role": "assistant",
-        "content": chatbot.generate_response(prompt)
+        "content": chatbot.generate_response(prompt, user)
     }
     return jsonify({"response": response})
 
