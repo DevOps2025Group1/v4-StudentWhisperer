@@ -28,7 +28,6 @@ class AzureSearchClient:
         )
 
     def search_documents(self, query: str, k_neighbors: int = 3, top_results: int = 3) -> str:
-        print(f"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA: {query}")
         """Performs semantic search on documents using a vectorized text query."""
         vector_query = VectorizableTextQuery(
             text=query,
