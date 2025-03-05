@@ -11,7 +11,7 @@ function App() {
       <Router>
         <div className="w-full h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
           <Routes>
-            <Route path="/" element={<Register />} />
+            <Route path="/" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/chat" element={<Chat />} />
