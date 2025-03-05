@@ -1,7 +1,7 @@
 // API service for interacting with the backend
 
-// Get the API URL from environment variables or use a default
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// Get the API URL from environment variables or use a default (azure backend)
+const API_URL = import.meta.env.VITE_API_URL || "https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
 
 /**
  * Fetch health status from the backend
