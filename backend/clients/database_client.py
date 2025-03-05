@@ -58,7 +58,7 @@ class DatabaseClient:
 
         return Student(student_id, name, email, [])
 
-    def check_user_login(self, email: str, password_hash: str):
+    def check_user_login(self, email: str, password: str):
         import logging
 
         query = '''
@@ -72,10 +72,10 @@ class DatabaseClient:
             result = cursor.fetchone()
 
             logging.error(result)
-            logging.error(password_hash)
-            logging.error(check_password_hash(result[1], password_hash))
+            logging.error(password)
+            logging.error(check_password_hash(result[1], password))
 
-            return check_password_hash(result[0], password_hash)
+            return check_password_hash(result[0], password)
 
         if not result:
             return False
