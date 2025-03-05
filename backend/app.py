@@ -94,7 +94,7 @@ def login():
     token_expiry = datetime.utcnow() + timedelta(hours=24)
     token = jwt.encode({
         'email': email,
-        'name': user['name'],
+        'name': email,
         'exp': token_expiry
     }, app.config['SECRET_KEY'])
     
@@ -104,7 +104,7 @@ def login():
         "token": token,
         "user": {
             "email": email,
-            "name": user['name']
+            "name": email
         }
     })
 
