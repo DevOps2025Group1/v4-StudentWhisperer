@@ -3,6 +3,19 @@
 // Get the API URL from environment variables or use a default
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+// User registration interface
+export interface RegisterUserData {
+  name: string;
+  email: string;
+  password: string;
+}
+
+// User login interface
+export interface LoginUserData {
+  email: string;
+  password: string;
+}
+
 /**
  * Fetch health status from the backend
  */
@@ -13,6 +26,74 @@ export async function checkApiHealth() {
   } catch (error) {
     console.error("Health check failed:", error);
     return { status: "error", message: "Could not connect to API" };
+  }
+}
+
+/**
+ * Register a new user
+ */
+export async function registerUser(userData: RegisterUserData) {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { 
+        success: false, 
+        error: errorData.message || "Registration failed" 
+      };
+    }
+    
+    return { 
+      success: true, 
+      data: await response.json() 
+    };
+  } catch (error) {
+    console.error("Registration failed:", error);
+    return { 
+      success: false, 
+      error: "Could not connect to registration service" 
+    };
+  }
+}
+
+/**
+ * Login a user
+ */
+export async function loginUser(userData: LoginUserData) {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { 
+        success: false, 
+        error: errorData.message || "Login failed" 
+      };
+    }
+    
+    return { 
+      success: true, 
+      data: await response.json() 
+    };
+  } catch (error) {
+    console.error("Login failed:", error);
+    return { 
+      success: false, 
+      error: "Could not connect to authentication service" 
+    };
   }
 }
 
