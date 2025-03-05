@@ -57,7 +57,7 @@ class DatabaseClient:
 
         return Student(student_id, name, email, [])
 
-    def check_user_login(email: str, password_hash: str):
+    def check_user_login(self, email: str, password_hash: str):
         query = '''
         SELECT id, name, email
         FROM dbo.Student
@@ -73,7 +73,7 @@ class DatabaseClient:
 
         return True
 
-    def email_already_exist(email: str):
+    def email_already_exist(self, email: str):
         query = '''
         SELECT id
         FROM dbo.Student
