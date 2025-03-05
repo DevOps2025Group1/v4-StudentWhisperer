@@ -6,8 +6,12 @@ import os
 import jwt
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
+import logging
+import clients.database_client as database_client
+
 
 load_dotenv()
+db = database_client.DatabaseClient()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -21,9 +25,6 @@ sample_messages = [
     {"id": "2", "role": "user", "content": "Tell me about your API endpoints."},
     {"id": "3", "role": "assistant", "content": "I have several test endpoints available. You can use /api/messages to get sample messages, /api/echo to echo back your input, and /api/health to check the API status."}
 ]
-
-# In-memory user database - in production, use a real database
-users_db = {}
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -46,7 +47,7 @@ def register():
     name = data.get('name')
 
     # Check if user already exists
-    if email in users_db:
+    if db.email_already_exist(email):
         return jsonify({
             "status": "error",
             "message": "User with this email already exists"
@@ -55,19 +56,15 @@ def register():
     # Hash the password before storing
     hashed_password = generate_password_hash(data.get('password'))
 
-    # Store new user
-    users_db[email] = {
-        'name': name,
-        'password': hashed_password,
-        'created_at': datetime.utcnow().isoformat()
-    }
-
+    student = db.add_new_student(name, email, hashed_password)
+    
     return jsonify({
         "status": "success",
         "message": "User registered successfully",
         "user": {
-            "email": email,
-            "name": name
+            "email": student.email,
+            "name": student.name,
+            "id": student.student_id
         }
     }), 201
 
@@ -84,19 +81,10 @@ def login():
         }), 400
 
     email = data.get('email')
-    password = data.get('password')
-
-    # Check if user exists
-    if email not in users_db:
-        return jsonify({
-            "status": "error",
-            "message": "Invalid email or password"
-        }), 401
-
-    user = users_db[email]
-
+    password_hash = generate_password_hash(data.get('password'))
+    
     # Verify password
-    if not check_password_hash(user['password'], password):
+    if not db.check_user_login(email, password_hash):
         return jsonify({
             "status": "error",
             "message": "Invalid email or password"
