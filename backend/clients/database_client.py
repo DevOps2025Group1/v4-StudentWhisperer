@@ -59,6 +59,8 @@ class DatabaseClient:
         return Student(student_id, name, email, [])
 
     def check_user_login(self, email: str, password_hash: str):
+        import logging
+
         query = '''
         SELECT name, password
         FROM dbo.Student
@@ -66,8 +68,13 @@ class DatabaseClient:
         '''
         
         with self.conn.cursor() as cursor:
-            cursor.execute(query, (email, password_hash))
+            cursor.execute(query, (email,))
             result = cursor.fetchone()
+
+            logging.error(result)
+            logging.error(password_hash)
+            logging.error(check_password_hash(result[1], password_hash))
+
             return check_password_hash(result[0], password_hash)
 
         if not result:
