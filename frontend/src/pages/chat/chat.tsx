@@ -58,15 +58,34 @@ export function Chat() {
 
   // Delete a chat
   const handleDeleteChat = (chatId: string) => {
-    setChats(chats.filter(chat => chat.id !== chatId));
+    // Remove the chat first
+    const remainingChats = chats.filter(chat => chat.id !== chatId);
+    
+    // Check if we're deleting the active chat
     if (activeChat === chatId) {
-      const remainingChats = chats.filter(chat => chat.id !== chatId);
       if (remainingChats.length > 0) {
-        setActiveChat(remainingChats[0].id);
-        setMessages(remainingChats[0].messages);
+        // If there are other chats, activate the first one
+        const nextChat = remainingChats[0];
+        // Update state in sequence
+        setChats(remainingChats);
+        setActiveChat(nextChat.id);
+        setMessages(nextChat.messages);
       } else {
-        createNewChat();
+        // If this was the last chat, create a new one
+        const newChatId = uuidv4();
+        const newChat = {
+          id: newChatId,
+          name: "Chat 1",
+          messages: []
+        };
+        // Set the new chat as the only chat
+        setChats([newChat]);
+        setActiveChat(newChatId);
+        setMessages([]);
       }
+    } else {
+      // If we're not deleting the active chat, just update the chats list
+      setChats(remainingChats);
     }
   };
 
@@ -86,6 +105,11 @@ async function handleSubmit(text?: string) {
   
   const messageText = text || question;
   if (!messageText.trim()) return;
+  
+  // Ensure we have an active chat before proceeding
+  if (!activeChat) {
+    createNewChat();
+  }
   
   setIsLoading(true);
   const messageId = uuidv4();
