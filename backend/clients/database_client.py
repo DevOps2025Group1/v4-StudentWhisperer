@@ -1,4 +1,3 @@
-# db_connector.py
 from typing import Optional
 from modules.student import Student
 import pyodbc

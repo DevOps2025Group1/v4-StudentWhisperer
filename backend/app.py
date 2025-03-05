@@ -7,9 +7,11 @@ import jwt
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
-import clients.database_client as db
+import clients.database_client as database_client
+
 
 load_dotenv()
+db = database_client.DatabaseClient()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
