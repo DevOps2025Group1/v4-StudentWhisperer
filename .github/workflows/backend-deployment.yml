@@ -7,7 +7,7 @@ on:
     branches: 
       [ main ]
     paths:
-    - './backend/**'
+    - 'backend/**'
     - '.github/workflows/studentwhisperer-backend-ca-AutoDeployTrigger-059614b6-bdb4-4b85-85b4-45207cc7b01b.yml'
 
   # Allow manual trigger 
