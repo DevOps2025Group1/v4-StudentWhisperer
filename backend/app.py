@@ -57,7 +57,7 @@ def register():
     hashed_password = generate_password_hash(data.get('password'))
 
     student = db.add_new_student(name, email, hashed_password)
-    
+
     return jsonify({
         "status": "success",
         "message": "User registered successfully",
@@ -82,7 +82,7 @@ def login():
 
     email = data.get('email')
     password_hash = generate_password_hash(data.get('password'))
-    
+
     # Verify password
     if not db.check_user_login(email, password_hash):
         return jsonify({
@@ -94,7 +94,7 @@ def login():
     token_expiry = datetime.utcnow() + timedelta(hours=24)
     token = jwt.encode({
         'email': email,
-        'name': email,
+        'name': user['name'],
         'exp': token_expiry
     }, app.config['SECRET_KEY'])
 
@@ -104,7 +104,7 @@ def login():
         "token": token,
         "user": {
             "email": email,
-            "name": email
+            "name": user['name']
         }
     })
 
