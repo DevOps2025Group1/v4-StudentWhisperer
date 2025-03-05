@@ -43,4 +43,34 @@ class DatabaseClient:
 
         return Student(student_id, name, email, courses)
 
+    def add_new_student(self, name: str, email: str, password: str) -> Student:
+        """Add a new student to the database."""
+        query = '''
+        INSERT INTO dbo.Student (name, email, password)
+        OUTPUT INSERTED.id
+        VALUES (?, ?, ?);
+        '''
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (name, email, password))
+            student_id = cursor.fetchone()[0]
+
+        return Student(student_id, name, email, [])
+
+    def check_user_login(email: str, password_hash: str):
+        query = '''
+        SELECT id, name, email
+        FROM dbo.Student
+        WHERE email = ? AND password = ?;
+        '''
+        
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (email, password_hash))
+            result = cursor.fetchone()
+
+        if not result:
+            return False
+
+        return True
+
 

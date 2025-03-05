@@ -7,6 +7,7 @@ import jwt
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
+import clients.database_client as db
 
 load_dotenv()
 
@@ -62,13 +63,16 @@ def register():
         'password': hashed_password,
         'created_at': datetime.utcnow().isoformat()
     }
+
+    student = db.add_new_student(name, email, hashed_password)
     
     return jsonify({
         "status": "success",
         "message": "User registered successfully",
         "user": {
             "email": email,
-            "name": name
+            "name": name,
+            "id": student.student_id
         }
     }), 201
 
@@ -85,19 +89,10 @@ def login():
         }), 400
     
     email = data.get('email')
-    password = data.get('password')
-    
-    # Check if user exists
-    if email not in users_db:
-        return jsonify({
-            "status": "error",
-            "message": "Invalid email or password"
-        }), 401
-    
-    user = users_db[email]
+    password_hash = generate_password_hash(data.get('password'))
     
     # Verify password
-    if not check_password_hash(user['password'], password):
+    if not db.check_user_login(email, password_hash):
         return jsonify({
             "status": "error",
             "message": "Invalid email or password"
