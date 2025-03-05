@@ -54,6 +54,7 @@ class DatabaseClient:
         with self.conn.cursor() as cursor:
             cursor.execute(query, (name, email, password))
             student_id = cursor.fetchone()[0]
+            cursor.commit()
 
         return Student(student_id, name, email, [])
 
@@ -66,6 +67,22 @@ class DatabaseClient:
         
         with self.conn.cursor() as cursor:
             cursor.execute(query, (email, password_hash))
+            result = cursor.fetchone()
+
+        if not result:
+            return False
+
+        return True
+
+    def email_already_exist(email: str):
+        query = '''
+        SELECT id
+        FROM dbo.Student
+        WHERE email = ?;
+        '''
+        
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (email,))
             result = cursor.fetchone()
 
         if not result:

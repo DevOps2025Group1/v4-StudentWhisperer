@@ -24,9 +24,6 @@ sample_messages = [
     {"id": "3", "role": "assistant", "content": "I have several test endpoints available. You can use /api/messages to get sample messages, /api/echo to echo back your input, and /api/health to check the API status."}
 ]
 
-# In-memory user database - in production, use a real database
-users_db = {}
-
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Simple health check endpoint"""
@@ -48,7 +45,7 @@ def register():
     name = data.get('name')
     
     # Check if user already exists
-    if email in users_db:
+    if db.email_already_exist(email):
         return jsonify({
             "status": "error",
             "message": "User with this email already exists"
@@ -56,13 +53,6 @@ def register():
     
     # Hash the password before storing
     hashed_password = generate_password_hash(data.get('password'))
-    
-    # Store new user
-    users_db[email] = {
-        'name': name,
-        'password': hashed_password,
-        'created_at': datetime.utcnow().isoformat()
-    }
 
     student = db.add_new_student(name, email, hashed_password)
     
@@ -70,8 +60,8 @@ def register():
         "status": "success",
         "message": "User registered successfully",
         "user": {
-            "email": email,
-            "name": name,
+            "email": student.email,
+            "name": student.name,
             "id": student.student_id
         }
     }), 201
