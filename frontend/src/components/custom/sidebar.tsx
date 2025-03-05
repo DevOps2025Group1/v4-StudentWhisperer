@@ -63,20 +63,20 @@ export function Sidebar({
             {chats.map((chat) => (
               <div
                 key={chat.id}
-                className="group relative"
+                className="group relative flex items-center"
               >
                 <Button
                   variant={activeChat === chat.id ? "secondary" : "ghost"}
-                  className="w-full justify-start gap-2 pr-8 text-left truncate"
+                  className="flex-grow justify-start gap-2 pr-10 text-left"
                   onClick={() => onSelectChat(chat.id)}
                 >
                   <MessageCircle className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{chat.name}</span>
+                  <span className="truncate max-w-[150px] inline-block">{chat.name}</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   onClick={(e) => handleDeleteChat(e, chat.id)}
                 >
                   <Trash2 className="h-4 w-4 text-primary" />
