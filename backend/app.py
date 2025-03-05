@@ -26,20 +26,20 @@ def health_check():
     """Simple health check endpoint"""
     return jsonify({"status": "OK", "message": "Backend API is running"})
 
-@app.route('/api/register', methods=['POST'])
+@app.route('/api/auth/register', methods=['POST'])
 def register():
     """Register a new user"""
     data = request.json
     
     # Validate input
-    if not data or not data.get('email') or not data.get('password') or not data.get('username'):
+    if not data or not data.get('email') or not data.get('password') or not data.get('name'):
         return jsonify({
             "status": "error",
-            "message": "Missing required fields: email, password, username"
+            "message": "Missing required fields: email, password, name"
         }), 400
     
     email = data.get('email')
-    username = data.get('username')
+    name = data.get('name')
     
     # Check if user already exists
     if email in users_db:
@@ -53,7 +53,7 @@ def register():
     
     # Store new user
     users_db[email] = {
-        'username': username,
+        'name': name,
         'password': hashed_password,
         'created_at': datetime.utcnow().isoformat()
     }
@@ -63,11 +63,11 @@ def register():
         "message": "User registered successfully",
         "user": {
             "email": email,
-            "username": username
+            "name": name
         }
     }), 201
 
-@app.route('/api/login', methods=['POST'])
+@app.route('/api/auth/login', methods=['POST'])
 def login():
     """Login a user"""
     data = request.json
@@ -102,7 +102,7 @@ def login():
     token_expiry = datetime.utcnow() + timedelta(hours=24)
     token = jwt.encode({
         'email': email,
-        'username': user['username'],
+        'name': user['name'],
         'exp': token_expiry
     }, app.config['SECRET_KEY'])
     
@@ -112,7 +112,7 @@ def login():
         "token": token,
         "user": {
             "email": email,
-            "username": user['username']
+            "name": user['name']
         }
     })
 
