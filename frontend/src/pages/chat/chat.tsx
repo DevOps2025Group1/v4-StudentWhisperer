@@ -10,7 +10,7 @@ import { Overview } from "@/components/custom/overview";
 import { Header } from "@/components/custom/header";
 import { Sidebar } from "@/components/custom/sidebar";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, PlusCircle } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { sendChatMessage } from "@/services/api";
 
@@ -245,18 +245,28 @@ export function Chat() {
   return (
     <div className="flex flex-col min-w-0 h-dvh bg-background">
       <Header>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="mr-2"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="size-9 rounded-full"
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={createNewChat}
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-full"
+          >
+            <PlusCircle className="h-4 w-4" />
+          </Button>
+        </div>
       </Header>
 
-      <Sidebar
-        isOpen={isSidebarOpen}
+      <Sidebar 
+        isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)}
         onDeleteChat={handleDeleteChat}
         chats={getDisplayChats()}
@@ -264,7 +274,7 @@ export function Chat() {
         onSelectChat={selectChat}
         onNewChat={createNewChat}
       />
-
+      
       <div
         className="flex flex-col min-w-0 gap-6 flex-1 overflow-y-scroll pt-4"
         ref={messagesContainerRef}
