@@ -3,12 +3,13 @@ from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 from flask_cors import CORS
 import os
-import jwt
+# import jwt  # Remove this line
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
 import clients.database_client as database_client
-
+import requests
+from jose import jwt
 
 load_dotenv()
 db = database_client.DatabaseClient()
@@ -18,6 +19,19 @@ CORS(app)  # Enable CORS for all routes
 
 # Secret key for JWT tokens - in production, use environment variables
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
+
+AZURE_TENANT_ID = "f4e52973-e80e-4711-9fa2-250b17c1c4f6"
+API_IDENTIFIER = "api://your-flask-api"
+
+def verify_token(token):
+    try:
+        header = jwt.get_unverified_header(token)
+        keys_url = f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/discovery/v2.0/keys"
+        keys = requests.get(keys_url).json()["keys"]
+        decoded = jwt.decode(token, keys, audience=API_IDENTIFIER)
+        return decoded
+    except Exception:
+        return None
 
 # Sample data - in a real app, this might come from a database
 sample_messages = [
@@ -134,6 +148,13 @@ def chat():
         "content": chatbot.generate_response(prompt)
     }
     return jsonify({"response": response})
+
+@app.route("/protected-api", methods=["GET"])
+def protected_api():
+    auth_header = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not verify_token(auth_header):
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify({"message": "Secure data"})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

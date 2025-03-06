@@ -23,6 +23,9 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /us
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install additional Python packages
+RUN pip install flask flask-jwt-extended requests python-jose
+
 # Copy the rest of the application
 COPY . .
 

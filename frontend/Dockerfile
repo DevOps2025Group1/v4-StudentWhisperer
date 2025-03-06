@@ -2,8 +2,9 @@
 FROM node:20-slim as build
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install --include=dev
 COPY . .
+RUN npm install @azure/msal-browser @azure/msal-react
 RUN npm run build
 
 # Production stage
