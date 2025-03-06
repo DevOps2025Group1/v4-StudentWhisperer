@@ -1,7 +1,7 @@
-import { Button } from '@/components/ui/button';
-import { PlusCircle, MessageCircle, X, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from "@/components/ui/button";
+import { PlusCircle, MessageCircle, X, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Chat {
   id: string;
@@ -19,23 +19,22 @@ interface SidebarProps {
   onNewChat: () => void;
 }
 
-export function Sidebar({ 
-  isOpen, 
-  onClose, 
-  onDeleteChat, 
-  chats, 
-  activeChat, 
-  onSelectChat, 
-  onNewChat 
+export function Sidebar({
+  isOpen,
+  onClose,
+  onDeleteChat,
+  chats,
+  activeChat,
+  onSelectChat,
+  onNewChat,
 }: SidebarProps) {
-  
   const handleDeleteChat = (e: React.MouseEvent, chatId: string) => {
     e.stopPropagation();
     if (onDeleteChat) {
       onDeleteChat(chatId);
     }
   };
-  
+
   return (
     <div
       className={cn(
@@ -61,25 +60,29 @@ export function Sidebar({
         <ScrollArea className="flex-1">
           <div className="space-y-2">
             {chats.map((chat) => (
-              <div
-                key={chat.id}
-                className="group relative flex items-center"
-              >
+              <div key={chat.id} className="group relative flex items-center">
                 <Button
                   variant={activeChat === chat.id ? "secondary" : "ghost"}
-                  className="flex-grow justify-start gap-2 pr-10 text-left"
+                  className="flex-grow justify-start gap-2 pl-3 pr-8 text-left rounded-lg overflow-hidden w-full"
                   onClick={() => onSelectChat(chat.id)}
                 >
                   <MessageCircle className="h-4 w-4 shrink-0" />
-                  <span className="truncate max-w-[150px] inline-block">{chat.name}</span>
+                  <span className="truncate max-w-[150px] inline-block">
+                    {chat.name}
+                  </span>
                 </Button>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  size="sm"
+                  className={cn(
+                    "absolute right-2 h-6 w-6 min-w-0 p-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-md",
+                    activeChat === chat.id
+                      ? "hover:bg-primary/20"
+                      : "hover:bg-muted"
+                  )}
                   onClick={(e) => handleDeleteChat(e, chat.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-primary" />
+                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               </div>
             ))}
