@@ -45,14 +45,15 @@ export function Sidebar({
       <div className="flex flex-col h-full p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Chats</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="size-9 rounded-full" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
         <Button
           onClick={onNewChat}
           className="mb-4 flex items-center gap-2"
-          variant="outline"
+          variant="ghost"
+          size="sm"
         >
           <PlusCircle className="h-4 w-4" />
           New Chat

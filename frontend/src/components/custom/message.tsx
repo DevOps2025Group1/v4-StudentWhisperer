@@ -88,32 +88,41 @@ export const ThinkingMessage = () => {
       data-role={role}
     >
       <div className="flex gap-4 w-full rounded-xl items-center py-3">
-        <motion.div
-          className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background"
-          animate={{
-            boxShadow: [
-              "0 0 0 rgba(120, 120, 255, 0)",
-              "0 0 8px rgba(120, 120, 255, 0.5)",
-              "0 0 0 rgba(120, 120, 255, 0)",
-            ],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "linear",
+        <div className="size-8 flex items-center justify-center relative">
+          {/* Outer pulsing circle */}
+          <motion.div 
+            className="absolute inset-0 rounded-full bg-primary/5 dark:bg-primary/10"
+            animate={{
+              scale: [0.9, 1.05, 0.9],
+              opacity: [0.5, 0.8, 0.5],
+              boxShadow: [
+                '0 0 0 rgba(120, 120, 255, 0)',
+                '0 0 10px rgba(120, 120, 255, 0.4)',
+                '0 0 0 rgba(120, 120, 255, 0)'
+              ]
             }}
-          >
-            <SparklesIcon size={14} />
-          </motion.div>
-        </motion.div>
+            transition={{
+              duration: 2.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              times: [0, 0.5, 1]
+            }}
+          />
+          
+          {/* Static border circle */}
+          <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background z-10">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+            >
+              <SparklesIcon size={14} />
+            </motion.div>
+          </div>
+        </div>
         <div className="flex items-center py-3">
           <LoadingDots />
         </div>
