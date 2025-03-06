@@ -16,14 +16,35 @@ interface ChatInputProps {
 
 const suggestedActions = [
   {
-    title: "What courses do I still need to take",
-    label: "to graduate my program?",
-    action: "What courses do I still need to take to graduate my program?",
+    title: "What courses must",
+    label: "I still take to graduate?",
+    action: "What courses must I still take to graduate?",
   },
   {
-    title: "What grades did I receive",
-    label: "this year?",
-    action: "What grades did I receive this year?",
+    title: "How many credits",
+    label: "have I earned so far?",
+    action:
+      "How many credits have I earned so far, and how many do I need to graduate?",
+  },
+  {
+    title: "What grades have I",
+    label: "received so far?",
+    action: "What grades have I received so far?",
+  },
+  {
+    title: "How do I",
+    label: "apply for graduation?",
+    action: "How do I apply for graduation?",
+  },
+  {
+    title: "Who can I reach out to",
+    label: "for support?",
+    action: "Who can I reach out to for support?",
+  },
+  {
+    title: "How do I",
+    label: "request a transcript?",
+    action: "How do I request a transcript?",
   },
 ];
 
@@ -44,7 +65,7 @@ export const ChatInput = ({
   return (
     <div className="relative w-full flex flex-col gap-4">
       {showSuggestions && isNewChat && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full">
           {suggestedActions.map((suggestedAction, index) => (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -60,7 +81,7 @@ export const ChatInput = ({
                   onSubmit(text);
                   setShowSuggestions(false);
                 }}
-                className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start"
+                className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start hover:bg-muted/50"
               >
                 <span className="font-medium">{suggestedAction.title}</span>
                 <span className="text-muted-foreground">

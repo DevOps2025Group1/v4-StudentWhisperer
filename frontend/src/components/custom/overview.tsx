@@ -21,7 +21,7 @@ export const Overview = () => {
           <p>
             Welcome to the <strong>Student Whisperer</strong>
             <br />
-            Your personal assistant for the radical clearity you deserve.
+            Your personal assistant for the radical clarity you deserve.
           </p>
         </div>
       </motion.div>
