@@ -56,6 +56,45 @@
     --chart-5: 340 75% 55%
   }
 }
+
+@layer components {
+  .profile-icon {
+    @apply fixed bottom-4 left-4 w-10 h-10 rounded-full bg-secondary flex items-center justify-center cursor-pointer hover:bg-accent transition-colors;
+  }
+  
+  .profile-popup {
+    @apply fixed bottom-16 left-4 bg-card p-4 rounded-lg shadow-lg border border-border w-80 z-50;
+    animation: fadeIn 0.2s ease-in-out;
+  }
+  
+  .profile-popup-header {
+    @apply flex items-center gap-3 mb-4 pb-2 border-b;
+  }
+  
+  .profile-popup-courses {
+    @apply mt-4;
+  }
+  
+  .course-item {
+    @apply flex justify-between items-center py-2 border-b border-border last:border-0;
+  }
+  
+  .course-grade {
+    @apply px-2 py-1 rounded-md text-sm font-medium;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
 @layer base {
   @font-face {
     font-family: 'geist';

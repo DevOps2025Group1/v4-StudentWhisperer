@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, PlusCircle } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { sendChatMessage } from "@/services/api";
+import { ProfileIcon } from '@/components/ui/ProfileIcon';
 
 interface Chat {
   id: string;
@@ -298,6 +299,7 @@ export function Chat() {
           isNewChat={isNewChat}
         />
       </div>
+      <ProfileIcon />
     </div>
   );
 }
