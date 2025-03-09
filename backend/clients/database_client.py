@@ -1,6 +1,7 @@
 # db_connector.py
 from typing import Optional
 from modules.student import Student
+from werkzeug.security import check_password_hash
 import pyodbc
 import os
 
@@ -58,16 +59,18 @@ class DatabaseClient:
 
         return Student(student_id, name, email, [])
 
-    def check_user_login(self, email: str, password_hash: str):
+    def check_user_login(self, email: str, password: str):
         query = '''
-        SELECT id, name, email
+        SELECT name, password
         FROM dbo.Student
-        WHERE email = ? AND password = ?;
+        WHERE email = ?;
         '''
         
         with self.conn.cursor() as cursor:
-            cursor.execute(query, (email, password_hash))
+            cursor.execute(query, (email,))
             result = cursor.fetchone()
+
+            return check_password_hash(result[1], password)
 
         if not result:
             return False

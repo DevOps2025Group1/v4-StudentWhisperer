@@ -81,10 +81,10 @@ def login():
         }), 400
 
     email = data.get('email')
-    password_hash = generate_password_hash(data.get('password'))
-
+    password = data.get('password')
+    
     # Verify password
-    if not db.check_user_login(email, password_hash):
+    if not db.check_user_login(email, password):
         return jsonify({
             "status": "error",
             "message": "Invalid email or password"
