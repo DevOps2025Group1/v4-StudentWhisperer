@@ -8,8 +8,17 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
 import clients.database_client as database_client
-from auth import verify_token, require_auth, token_required
+from auth import (
+    verify_azure_token,
+    require_azure_auth,
+    token_required,
+    exchange_azure_token,
+)
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 load_dotenv()
 db = database_client.DatabaseClient()
@@ -135,6 +144,31 @@ def login():
     )
 
 
+# Azure AD authentication endpoint
+@app.route("/api/auth/azure-token", methods=["POST"])
+def azure_login():
+    """Exchange an Azure AD token for an application token"""
+    # The actual verification and exchange happens in the exchange_azure_token function
+    # which will verify the Azure token from the Authorization header
+    result = exchange_azure_token(
+        None
+    )  # Token is extracted from the header in the function
+
+    # If result is a tuple, it's an error response
+    if isinstance(result, tuple):
+        return result
+
+    # Success response with token and user info
+    return jsonify(
+        {
+            "status": "success",
+            "message": "Azure AD authentication successful",
+            "token": result["token"],
+            "user": result["user"],
+        }
+    )
+
+
 # Public endpoints - no authentication required
 @app.route("/api/messages", methods=["GET"])
 def get_messages():
@@ -186,7 +220,7 @@ def chat():
 
 # New protected endpoint using Azure AD authentication
 @app.route("/api/protected", methods=["GET"])
-@require_auth
+@require_azure_auth
 def protected_endpoint():
     """Protected endpoint that requires Azure AD authentication"""
     # request.user is set by the @require_auth decorator
@@ -216,6 +250,7 @@ def get_user_info():
             "user": {
                 "email": request.current_user["email"],
                 "name": request.current_user["name"],
+                "auth_source": request.current_user.get("auth_source", "internal"),
             },
         }
     )

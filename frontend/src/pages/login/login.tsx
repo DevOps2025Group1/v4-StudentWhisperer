@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Header } from "@/components/custom/header";
 import { loginUser } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import { useMsal } from "@azure/msal-react";
+import { loginRequest } from "@/config/msalConfig";
 
 interface LocationState {
   from?: string;
@@ -16,6 +18,8 @@ export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { instance } = useMsal();
+
   const locationState = location.state as LocationState;
   const from = locationState?.from || "/chat";
 
@@ -93,15 +97,15 @@ export function Login() {
     }
   };
 
-  // Added test login function
+  // Test login function
   const handleTestLogin = async () => {
     setIsSubmitting(true);
 
     try {
       // Use test credentials
       const testCredentials = {
-        email: "test@example.com",
-        password: "password123",
+        email: "john.doe@studentwhisperer.com",
+        password: "TSEyshinTiNf",
       };
 
       const result = await loginUser(testCredentials);
@@ -122,6 +126,23 @@ export function Login() {
       console.error("Test login error:", error);
       setErrors({
         form: "Test login failed. Please check if the backend is running.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Microsoft login handler
+  const handleMicrosoftLogin = async () => {
+    try {
+      setIsSubmitting(true);
+      await instance.loginPopup(loginRequest);
+      // The MsalAuthListener component will handle the login success and update AuthContext
+      // which will then automatically redirect to the protected route
+    } catch (error) {
+      console.error("Microsoft login error:", error);
+      setErrors({
+        form: "Microsoft login failed. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -182,6 +203,26 @@ export function Login() {
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Signing In..." : "Sign In"}
+              </Button>
+
+              {/* Azure AD login button */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={handleMicrosoftLogin}
+                disabled={isSubmitting}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 23 23"
+                  className="mr-2 h-5 w-5"
+                  fill="currentColor"
+                >
+                  <path d="M0 0h23v23H0z" fill="none" />
+                  <path d="M11.5 0C17.9 0 23 5.1 23 11.5S17.9 23 11.5 23 0 17.9 0 11.5 5.1 0 11.5 0zm-6 5v6h6V5h-6zm8 0v6h6V5h-6zm-8 8v6h6v-6h-6zm8 0v6h6v-6h-6z" />
+                </svg>
+                Sign in with Microsoft
               </Button>
 
               {/* Test login button */}

@@ -56,17 +56,42 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Verify token validity on mount
   useEffect(() => {
     const verifyTokenValidity = async () => {
+      // Skip verification if we're already loading or don't have a token
+      if (loading || !localStorage.getItem("auth_token")) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const savedToken = localStorage.getItem("auth_token");
         const savedUser = localStorage.getItem("auth_user");
+        const authSource = localStorage.getItem("auth_source");
+
+        // Skip token validation for SSO sessions as they're handled by MSAL
+        if (authSource === "azure_ad") {
+          if (savedToken && savedUser) {
+            setToken(savedToken);
+            setUser(JSON.parse(savedUser));
+            setIsAuthenticated(true);
+          }
+          setLoading(false);
+          return;
+        }
 
         if (savedToken && savedUser) {
+          // Only verify if current state doesn't match stored state
+          const storedUser = JSON.parse(savedUser);
+          if (token === savedToken && JSON.stringify(user) === JSON.stringify(storedUser)) {
+            setLoading(false);
+            return;
+          }
+
           // Verify token with backend
           const isValid = await validateToken();
 
           if (isValid) {
             setToken(savedToken);
-            setUser(JSON.parse(savedUser));
+            setUser(storedUser);
             setIsAuthenticated(true);
           } else {
             // Token is not valid, clear auth state
@@ -76,6 +101,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(null);
             localStorage.removeItem("auth_token");
             localStorage.removeItem("auth_user");
+            localStorage.removeItem("auth_source");
           }
         } else {
           // Clear any partial state if token or user is missing
@@ -84,6 +110,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(null);
           localStorage.removeItem("auth_token");
           localStorage.removeItem("auth_user");
+          localStorage.removeItem("auth_source");
         }
       } catch (error) {
         console.error("Error verifying auth state:", error);
@@ -93,14 +120,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(null);
         localStorage.removeItem("auth_token");
         localStorage.removeItem("auth_user");
+        localStorage.removeItem("auth_source");
       } finally {
-        // Mark loading as complete
         setLoading(false);
       }
     };
 
     verifyTokenValidity();
-  }, []);
+  }, [loading, token, user]); // Add proper dependencies
 
   const login = (newToken: string, newUser: any) => {
     localStorage.setItem("auth_token", newToken);
@@ -114,6 +141,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = () => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_user");
+    localStorage.removeItem("auth_source");
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
