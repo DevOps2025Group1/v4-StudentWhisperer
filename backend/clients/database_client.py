@@ -22,12 +22,14 @@ class DatabaseClient:
         return pyodbc.connect(connection_str)
 
     def get_student_info(self, email: str) -> Optional[Student]:
-        """Retrieve student information including courses and grades."""
+        """Retrieve student information including courses, grades, and program."""
         query = """
-        SELECT s.id, s.name, s.email, c.name AS course_name, g.grade, g.created_at, g.feedback
+        SELECT s.id, s.name, s.email, c.name AS course_name, g.grade, g.created_at, g.feedback,
+               p.id AS program_id, p.name, p.european_credits AS program_name
         FROM dbo.Student s
         JOIN dbo.Grade g ON s.id = g.student_id
         JOIN dbo.Course c ON g.course_id = c.id
+        JOIN dbo.Program p ON s.program_id = p.id
         WHERE s.email = ?;
         """
 
@@ -40,23 +42,39 @@ class DatabaseClient:
 
         student_id, name, email = results[0][:3]
         courses = [{"course_name": row[3], "grade": row[4]} for row in results]
+        program = {
+            "program_id": results[0][7],
+            "program_name": results[0][8]
+        }
 
-        return Student(student_id, name, email, courses)
+        return Student(student_id, name, email, courses, program)
 
-    def add_new_student(self, name: str, email: str, password: str) -> Student:
+
+    def add_new_student(self, name: str, email: str, password: str, program_id: int = None) -> Student:
         """Add a new student to the database."""
         query = """
-        INSERT INTO dbo.Student (name, email, password)
+        INSERT INTO dbo.Student (name, email, password, program_id)
         OUTPUT INSERTED.id
-        VALUES (?, ?, ?);
+        VALUES (?, ?, ?, ?);
         """
 
         with self.conn.cursor() as cursor:
-            cursor.execute(query, (name, email, password))
+            cursor.execute(query, (name, email, password, program_id))
             student_id = cursor.fetchone()[0]
             cursor.commit()
 
-        return Student(student_id, name, email, [])
+        program = None
+        if program_id:
+            program_query = "SELECT id, name FROM dbo.Program WHERE id = ?;"
+            cursor.execute(program_query, (program_id,))
+            prog_result = cursor.fetchone()
+            if prog_result:
+                program = {
+                    "program_id": prog_result[0],
+                    "program_name": prog_result[1]
+                }
+
+        return Student(student_id, name, email, [], program)
 
     def check_user_login(self, email: str, password: str):
         query = """

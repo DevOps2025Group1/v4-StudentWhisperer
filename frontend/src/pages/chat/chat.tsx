@@ -283,7 +283,9 @@ export function Chat() {
     }
   }
 
-  // Function to load student data from the API
+  /*
+   * Function to load student data from the API
+   */
   const loadStudentData = async (email: string) => {
     setIsLoadingProfile(true);
     try {
@@ -294,9 +296,6 @@ export function Chat() {
       
       // Fetch student data including courses, grades, and program
       const studentData = await fetchStudentCourses(email);
-      
-      // Log studentData for debugging
-      console.log("Student data to display:", studentData);
       
       // Create proper structure for the profile popup
       setStudentInfo({
@@ -321,7 +320,9 @@ export function Chat() {
     }
   };
 
-  // Toggle profile popup
+  /* 
+   * Function to toggle the profile popup
+   */
   const toggleProfile = () => {
     // If opening profile and we don't have data yet, try to load it
     if (!isProfileOpen && !studentInfo) {

@@ -256,26 +256,6 @@ def get_user_info():
     )
 
 
-# Add the database connection function
-def get_db_connection():
-    try:
-        import pyodbc
-        
-        server = os.environ.get('DB_SERVER')
-        database = os.environ.get('DB_NAME')
-        username = os.environ.get('DB_USER')
-        password = os.environ.get('DB_PASSWORD')
-        
-        # Build connection string
-        conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
-        
-        # Connect to the database
-        conn = pyodbc.connect(conn_str)
-        return conn
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        return None
-
 @app.route('/api/student/courses', methods=['GET'])
 @token_required
 def get_student_courses():
@@ -285,72 +265,43 @@ def get_student_courses():
         if not email:
             return jsonify({"error": "Email parameter is required"}), 400
         
-        # Connect to the database
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Failed to connect to database"}), 500
-            
-        cursor = conn.cursor()
-        
-        # Get student ID
-        cursor.execute(
-            "SELECT id, name, program_id FROM Student WHERE email = ?", 
-            (email,)
-        )
-        student = cursor.fetchone()
-        if not student:
-            conn.close()
+        # Fetch student data including program information
+        student_info = db.get_student_info(email)
+        if not student_info:
             return jsonify({"error": "Student not found"}), 404
         
-        student_id = student[0]
-        program_id = student[2]
-        
-        # Get program information
-        cursor.execute(
-            "SELECT id, name, european_credits FROM Program WHERE id = ?",
-            (program_id,)
-        )
-        program_row = cursor.fetchone()
-        program = None
-        if program_row:
-            program = {
-                "id": program_row[0],
-                "name": program_row[1],
-                "european_credits": program_row[2]
-            }
-        
-        # Get courses and grades
-        cursor.execute("""
-            SELECT g.id, g.grade, g.created_at, g.feedback, g.course_id,
-                   c.name, c.european_credits, c.program_id
-            FROM Grade g
-            JOIN Course c ON g.course_id = c.id
-            WHERE g.student_id = ?
-            ORDER BY g.created_at DESC
-        """, (student_id,))
-        
-        grades = []
-        for row in cursor.fetchall():
-            grade = {
-                "id": row[0],
-                "course_id": row[4],
-                "grade": row[1],
-                "feedback": row[3],
-                "created_at": str(row[2]),  # Convert datetime to string
+        # Use the actual program data from student_info
+        program_data = {
+            "id": student_info.program.get("program_id", 0),
+            "name": student_info.program.get("program_name", ""),
+            "european_credits": student_info.program.get("european_credits", 180)
+        }
+
+        # Format the courses data from student_info
+        formatted_grades = []
+        for i, course in enumerate(student_info.courses):
+            formatted_grade = {
+                "id": i + 1,  # Generate a sequential ID
+                "course_id": i + 100,  # This could be fetched from database in the future
+                "grade": course["grade"],
+                "feedback": course.get("feedback", ""),  # May not be present in all courses
+                "created_at": str(datetime.now().date()),  # Ideally this would come from the database
                 "course": {
-                    "id": row[4],
-                    "name": row[5],
-                    "european_credits": row[6],
-                    "program_id": row[7]
+                    "id": i + 100,  # Same as course_id above
+                    "name": course["course_name"],
+                    "european_credits": 6,  # This could be fetched from database in the future
+                    "program_id": student_info.program.get("program_id", 0)
                 }
             }
-            grades.append(grade)
+            formatted_grades.append(formatted_grade)
         
-        conn.close()
-        return jsonify({"program": program, "grades": grades})
+        return jsonify({
+            "program": program_data, 
+            "grades": formatted_grades
+        })
     
     except Exception as e:
-        print(f"Error fetching student courses: {e}")
+        logging.error(f"Error fetching student courses: {e}")
         return jsonify({"error": f"Server error while fetching student courses: {str(e)}"}), 500
 
 

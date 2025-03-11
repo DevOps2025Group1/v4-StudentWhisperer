@@ -3,8 +3,8 @@
 // Get the API URL from environment variables or use a default (azure backend)
 const API_URL =
   import.meta.env.VITE_API_URL ||
-  "https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
-//   "http://localhost:5000";
+  //"https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
+   "http://localhost:5000";
 
 // User registration interface
 export interface RegisterUserData {
@@ -266,6 +266,10 @@ export async function getCurrentUser() {
   }
 }
 
+
+/* 
+ * Fetch student data from the backend
+ */
 export async function fetchStudentCourses(email: string) {
   try {
     console.log(`Fetching student data for ${email} from ${API_URL}/api/student/courses`);
@@ -284,5 +288,7 @@ export async function fetchStudentCourses(email: string) {
     return data;
   } catch (error) {
     console.error('Error fetching student courses:', error);
+    // Return empty data structure to prevent undefined errors
+    return { program: null, grades: [] };
   }
 }
