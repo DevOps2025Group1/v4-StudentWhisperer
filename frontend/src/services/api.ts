@@ -1,10 +1,20 @@
 // API service for interacting with the backend
 
-// Get the API URL from environment variables or use a default (azure backend)
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
-  // "http://localhost:5000";
+// Get the API URL from runtime environment variables, fallback to build-time env vars
+// This allows the value to be overridden at container runtime
+declare global {
+  interface Window {
+    ENV?: {
+      VITE_API_URL?: string;
+      VITE_FRONTEND_URL?: string;
+    };
+  }
+}
+
+// Prioritize runtime env over build-time env
+const API_URL = window.ENV?.VITE_API_URL || import.meta.env.VITE_API_URL;
+
+console.log("Using API URL:", API_URL);
 
 // User registration interface
 export interface RegisterUserData {
