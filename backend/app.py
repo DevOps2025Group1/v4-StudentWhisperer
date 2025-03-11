@@ -127,7 +127,7 @@ def login():
         return jsonify({"status": "error", "message": "Invalid email or password"}), 401
 
     # Generate JWT token
-    token_expiry = datetime.utcnow() + timedelta(hours=24)
+    token_expiry = datetime.now() + timedelta(hours=24)
     token = jwt.encode(
         {"email": email, "name": email, "exp": token_expiry},
         app.config["SECRET_KEY"],
@@ -211,7 +211,7 @@ def chat():
 
     response = {
         "role": "assistant",
-        "content": chatbot.generate_response(prompt),
+        "content": chatbot.generate_response(prompt, user_email),
         "user": user_email,  # Optionally include user info in the response
     }
 

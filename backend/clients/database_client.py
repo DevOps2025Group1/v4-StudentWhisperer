@@ -57,6 +57,8 @@ class DatabaseClient:
             student_id = cursor.fetchone()[0]
             cursor.commit()
 
+        self.add_demo_student_data(student_id)
+
         return Student(student_id, name, email, [])
     
     def add_demo_student_data(self, student_id: int):
