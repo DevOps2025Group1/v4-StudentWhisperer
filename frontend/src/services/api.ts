@@ -4,7 +4,7 @@
 const API_URL =
   import.meta.env.VITE_API_URL ||
   "https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
-//   "http://localhost:5000";
+  // "http://localhost:5000";
 
 // User registration interface
 export interface RegisterUserData {

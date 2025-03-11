@@ -3,6 +3,7 @@ from modules.student import Student
 from werkzeug.security import check_password_hash
 import pyodbc
 import os
+import random
 
 
 class DatabaseClient:
@@ -56,7 +57,39 @@ class DatabaseClient:
             student_id = cursor.fetchone()[0]
             cursor.commit()
 
+        self.add_demo_student_data(student_id)
+
         return Student(student_id, name, email, [])
+    
+    def add_demo_student_data(self, student_id: int):
+        """Connect demo courses and grades to the specified student."""
+
+        # Get all courses connected to the current students program
+        query = """
+        SELECT c.id
+        FROM dbo.Course c
+        WHERE c.program_id = (
+            SELECT s.program_id
+            FROM dbo.Student s
+            WHERE s.id = ?
+        );
+        """
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (student_id,))
+            course_ids = [row[0] for row in cursor.fetchall()]
+
+        # Randomly select a subset of courses, and generate random grades
+        courses = random.sample(course_ids, random.randint(1, len(course_ids)))
+        grades = [(student_id, course, random.randint(4, 10)) for course in courses]
+
+        # Insert demo grades for the student
+        query = """
+        INSERT INTO dbo.Grade (student_id, course_id, grade)
+        VALUES (?, ?, ?);
+        """
+        with self.conn.cursor() as cursor:
+            cursor.executemany(query, grades)
+            cursor.commit()
 
     def check_user_login(self, email: str, password: str):
         query = """
