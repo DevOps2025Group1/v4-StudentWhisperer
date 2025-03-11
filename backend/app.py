@@ -274,22 +274,22 @@ def get_student_courses():
         program_data = {
             "id": student_info.program.get("program_id", 0),
             "name": student_info.program.get("program_name", ""),
-            "european_credits": student_info.program.get("european_credits", 180)
+            "european_credits": student_info.program.get("program_ec", 180)
         }
 
         # Format the courses data from student_info
         formatted_grades = []
         for i, course in enumerate(student_info.courses):
             formatted_grade = {
-                "id": i + 1,  # Generate a sequential ID
-                "course_id": i + 100,  # This could be fetched from database in the future
+                "id": course["id"],
+                "course_id": i + 100,  
                 "grade": course["grade"],
-                "feedback": course.get("feedback", ""),  # May not be present in all courses
-                "created_at": str(datetime.now().date()),  # Ideally this would come from the database
+                "feedback": course.get("feedback", ""),
+                "created_at": str(course["created_at"]), 
                 "course": {
-                    "id": i + 100,  # Same as course_id above
+                    "id": course["id"],  
                     "name": course["course_name"],
-                    "european_credits": 6,  # This could be fetched from database in the future
+                    "european_credits": course["ec"],  
                     "program_id": student_info.program.get("program_id", 0)
                 }
             }
