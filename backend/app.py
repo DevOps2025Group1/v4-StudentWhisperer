@@ -35,29 +35,29 @@ def health_check():
 def register():
     """Register a new user"""
     data = request.json
-    
+
     # Validate input
     if not data or not data.get('email') or not data.get('password') or not data.get('name'):
         return jsonify({
             "status": "error",
             "message": "Missing required fields: email, password, name"
         }), 400
-    
+
     email = data.get('email')
     name = data.get('name')
-    
+
     # Check if user already exists
     if db.email_already_exist(email):
         return jsonify({
             "status": "error",
             "message": "User with this email already exists"
         }), 409
-    
+
     # Hash the password before storing
     hashed_password = generate_password_hash(data.get('password'))
 
     student = db.add_new_student(name, email, hashed_password)
-    
+
     return jsonify({
         "status": "success",
         "message": "User registered successfully",
@@ -72,24 +72,24 @@ def register():
 def login():
     """Login a user"""
     data = request.json
-    
+    print(data, flush=True)
     # Validate input
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({
             "status": "error",
             "message": "Missing required fields: email, password"
         }), 400
-    
+
     email = data.get('email')
     password = data.get('password')
-    
+
     # Verify password
     if not db.check_user_login(email, password):
         return jsonify({
             "status": "error",
             "message": "Invalid email or password"
         }), 401
-    
+
     # Generate JWT token
     token_expiry = datetime.utcnow() + timedelta(hours=24)
     token = jwt.encode({
@@ -97,7 +97,7 @@ def login():
         'name': email,
         'exp': token_expiry
     }, app.config['SECRET_KEY'])
-    
+
     return jsonify({
         "status": "success",
         "message": "Login successful",
@@ -127,6 +127,7 @@ def echo():
 def chat():
     """Simulate a chat response"""
     data = request.json
+    print(data, flush=True)
     prompt = data.get('message', '')
     chatbot = OpenAIChatbot()
     response = {

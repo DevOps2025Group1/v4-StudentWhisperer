@@ -1,7 +1,7 @@
 // API service for interacting with the backend
 
 // Get the API URL from environment variables or use a default (azure backend)
-const API_URL = import.meta.env.VITE_API_URL || "https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 // User registration interface
 export interface RegisterUserData {
@@ -41,24 +41,24 @@ export async function registerUser(userData: RegisterUserData) {
       },
       body: JSON.stringify(userData),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
-      return { 
-        success: false, 
-        error: errorData.message || "Registration failed" 
+      return {
+        success: false,
+        error: errorData.message || "Registration failed"
       };
     }
-    
-    return { 
-      success: true, 
-      data: await response.json() 
+
+    return {
+      success: true,
+      data: await response.json()
     };
   } catch (error) {
     console.error("Registration failed:", error);
-    return { 
-      success: false, 
-      error: "Could not connect to registration service" 
+    return {
+      success: false,
+      error: "Could not connect to registration service"
     };
   }
 }
@@ -75,24 +75,24 @@ export async function loginUser(userData: LoginUserData) {
       },
       body: JSON.stringify(userData),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
-      return { 
-        success: false, 
-        error: errorData.message || "Login failed" 
+      return {
+        success: false,
+        error: errorData.message || "Login failed"
       };
     }
-    
-    return { 
-      success: true, 
-      data: await response.json() 
+
+    return {
+      success: true,
+      data: await response.json()
     };
   } catch (error) {
     console.error("Login failed:", error);
-    return { 
-      success: false, 
-      error: "Could not connect to authentication service" 
+    return {
+      success: false,
+      error: "Could not connect to authentication service"
     };
   }
 }
