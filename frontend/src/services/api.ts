@@ -3,8 +3,8 @@
 // Get the API URL from environment variables or use a default (azure backend)
 const API_URL =
   import.meta.env.VITE_API_URL ||
-  // "https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
-  "http://localhost:5000";
+  "https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
+  // "http://localhost:5000";
 
 // User registration interface
 export interface RegisterUserData {
