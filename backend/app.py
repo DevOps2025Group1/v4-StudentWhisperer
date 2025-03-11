@@ -256,6 +256,104 @@ def get_user_info():
     )
 
 
+# Add the database connection function
+def get_db_connection():
+    try:
+        import pyodbc
+        
+        server = os.environ.get('DB_SERVER')
+        database = os.environ.get('DB_NAME')
+        username = os.environ.get('DB_USER')
+        password = os.environ.get('DB_PASSWORD')
+        
+        # Build connection string
+        conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+        
+        # Connect to the database
+        conn = pyodbc.connect(conn_str)
+        return conn
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        return None
+
+@app.route('/api/student/courses', methods=['GET'])
+@token_required
+def get_student_courses():
+    try:
+        # Get email from query parameter
+        email = request.args.get('email')
+        if not email:
+            return jsonify({"error": "Email parameter is required"}), 400
+        
+        # Connect to the database
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Failed to connect to database"}), 500
+            
+        cursor = conn.cursor()
+        
+        # Get student ID
+        cursor.execute(
+            "SELECT id, name, program_id FROM Student WHERE email = ?", 
+            (email,)
+        )
+        student = cursor.fetchone()
+        if not student:
+            conn.close()
+            return jsonify({"error": "Student not found"}), 404
+        
+        student_id = student[0]
+        program_id = student[2]
+        
+        # Get program information
+        cursor.execute(
+            "SELECT id, name, european_credits FROM Program WHERE id = ?",
+            (program_id,)
+        )
+        program_row = cursor.fetchone()
+        program = None
+        if program_row:
+            program = {
+                "id": program_row[0],
+                "name": program_row[1],
+                "european_credits": program_row[2]
+            }
+        
+        # Get courses and grades
+        cursor.execute("""
+            SELECT g.id, g.grade, g.created_at, g.feedback, g.course_id,
+                   c.name, c.european_credits, c.program_id
+            FROM Grade g
+            JOIN Course c ON g.course_id = c.id
+            WHERE g.student_id = ?
+            ORDER BY g.created_at DESC
+        """, (student_id,))
+        
+        grades = []
+        for row in cursor.fetchall():
+            grade = {
+                "id": row[0],
+                "course_id": row[4],
+                "grade": row[1],
+                "feedback": row[3],
+                "created_at": str(row[2]),  # Convert datetime to string
+                "course": {
+                    "id": row[4],
+                    "name": row[5],
+                    "european_credits": row[6],
+                    "program_id": row[7]
+                }
+            }
+            grades.append(grade)
+        
+        conn.close()
+        return jsonify({"program": program, "grades": grades})
+    
+    except Exception as e:
+        print(f"Error fetching student courses: {e}")
+        return jsonify({"error": f"Server error while fetching student courses: {str(e)}"}), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)

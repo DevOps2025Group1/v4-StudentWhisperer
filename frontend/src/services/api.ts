@@ -265,3 +265,24 @@ export async function getCurrentUser() {
     };
   }
 }
+
+export async function fetchStudentCourses(email: string) {
+  try {
+    console.log(`Fetching student data for ${email} from ${API_URL}/api/student/courses`);
+    
+    const response = await fetch(`${API_URL}/api/student/courses?email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("API response:", data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching student courses:', error);
+  }
+}
