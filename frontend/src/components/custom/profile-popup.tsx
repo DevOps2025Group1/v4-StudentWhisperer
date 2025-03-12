@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { X, BookOpen, Save } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateUserEmail, updateUserPassword } from "@/services/api";
@@ -50,6 +50,18 @@ export function ProfilePopup({ studentInfo, isLoading, onClose, onInfoUpdate }: 
   const [emailUpdateStatus, setEmailUpdateStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [passwordUpdateStatus, setPasswordUpdateStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSsoLogin, setIsSsoLogin] = useState(false);
+
+  // Check if the user is logged in with SSO
+  useEffect(() => {
+    const authSource = localStorage.getItem('auth_source');
+    setIsSsoLogin(authSource === 'azure_ad');
+    
+    // If user is SSO and somehow got to settings tab, switch back to profile
+    if (authSource === 'azure_ad' && activeTab === 'settings') {
+      setActiveTab('profile');
+    }
+  }, [activeTab]);
 
   const handleEmailUpdate = async () => {
     if (!studentInfo) return;
@@ -182,38 +194,42 @@ export function ProfilePopup({ studentInfo, isLoading, onClose, onInfoUpdate }: 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      {/* Changed padding to pt-0 and added an inner container with padding for content */}
-      <div className="bg-background rounded-lg shadow-lg pt-0 px-0 pb-0 max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header with its own padding */}
-        <div className="flex justify-between items-center px-6 py-4 sticky top-0 z-10 bg-background border-b">
-          <h2 className="text-xl font-bold">Student Profile</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+      <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] flex flex-col">
+        {/* Fixed header that stays in place */}
+        <div className="sticky top-0 bg-background z-10 px-6 py-4 border-b">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Student Profile</h2>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Tab navigation - Only show Settings tab for non-SSO users */}
+          <div className="flex mt-4">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`px-4 py-2 font-medium text-sm ${activeTab === 'profile' 
+                ? 'border-b-2 border-primary text-primary' 
+                : 'text-muted-foreground'}`}
+            >
+              Profile
+            </button>
+            
+            {!isSsoLogin && (
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`px-4 py-2 font-medium text-sm ${activeTab === 'settings' 
+                  ? 'border-b-2 border-primary text-primary' 
+                  : 'text-muted-foreground'}`}
+              >
+                Settings
+              </button>
+            )}
+          </div>
         </div>
         
-        {/* Tab navigation with its own padding */}
-        <div className="flex border-b sticky top-[60px] z-10 bg-background px-6">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`px-4 py-2 font-medium text-sm ${activeTab === 'profile' 
-              ? 'border-b-2 border-primary text-primary' 
-              : 'text-muted-foreground'}`}
-          >
-            Profile
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 font-medium text-sm ${activeTab === 'settings' 
-              ? 'border-b-2 border-primary text-primary' 
-              : 'text-muted-foreground'}`}
-          >
-            Settings
-          </button>
-        </div>
-        
-        {/* Scrollable content area with padding */}
-        <div className="overflow-y-auto flex-1 p-6">
+        {/* Scrollable content area with its own padding */}
+        <div className="overflow-y-auto p-6 flex-1">
           {activeTab === 'profile' && (
             <div className="space-y-4">
               <div className="flex items-center justify-center mb-4">
@@ -225,6 +241,11 @@ export function ProfilePopup({ studentInfo, isLoading, onClose, onInfoUpdate }: 
               <div className="space-y-2 text-center">
                 <h3 className="font-medium text-lg">{studentInfo.name}</h3>
                 <p className="text-muted-foreground">{studentInfo.email}</p>
+                {isSsoLogin && (
+                  <p className="text-xs text-muted-foreground bg-muted inline-block px-2 py-1 rounded">
+                    Microsoft SSO Account
+                  </p>
+                )}
                 {studentInfo.program && (
                   <div className="flex items-center justify-center gap-1 text-sm">
                     <BookOpen className="h-4 w-4 opacity-70" />
@@ -299,7 +320,8 @@ export function ProfilePopup({ studentInfo, isLoading, onClose, onInfoUpdate }: 
             </div>
           )}
           
-          {activeTab === 'settings' && (
+          {/* Only render settings tab if not an SSO user */}
+          {activeTab === 'settings' && !isSsoLogin && (
             <div className="space-y-6">
               <div className="space-y-4">
                 <h3 className="font-medium text-lg">Update Email</h3>

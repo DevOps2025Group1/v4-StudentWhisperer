@@ -326,11 +326,6 @@ def get_student_courses():
         return jsonify({"error": f"Server error while fetching student courses: {str(e)}"}), 500
 
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
-
-
 # Endpoint to update user email
 @app.route('/api/student/update-email', methods=['PUT'])
 @token_required
@@ -434,3 +429,4 @@ def update_password():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
