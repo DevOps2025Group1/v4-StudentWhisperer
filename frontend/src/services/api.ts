@@ -1,5 +1,4 @@
 // API service for interacting with the backend
-
 // Get the API URL from runtime environment variables, fallback to build-time env vars
 // This allows the value to be overridden at container runtime
 declare global {
@@ -14,7 +13,6 @@ declare global {
 // Prioritize runtime env over build-time env
 const API_URL = window.ENV?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
-console.log("Using API URL:", API_URL);
 
 // User registration interface
 export interface RegisterUserData {
@@ -273,5 +271,28 @@ export async function getCurrentUser() {
       success: false,
       error: "Failed to fetch user information",
     };
+  }
+}
+
+/* 
+ * Fetch student data from the backend
+ */
+export async function fetchStudentCourses(email: string) {
+  try {    
+    const response = await fetch(`${API_URL}/api/student/courses?email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching student courses:', error);
+    // Return empty data structure to prevent undefined errors
+    return { program: null, grades: [] };
   }
 }

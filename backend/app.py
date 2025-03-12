@@ -256,6 +256,54 @@ def get_user_info():
     )
 
 
+# Endpoint for collecting student courses
+@app.route('/api/student/courses', methods=['GET'])
+@token_required
+def get_student_courses():
+    try:
+        # Get email from query parameter
+        email = request.args.get('email')
+        if not email:
+            return jsonify({"error": "Email parameter is required"}), 400
+        
+        student_info = db.get_student_info(email)
+        if not student_info:
+            return jsonify({"error": "Student not found"}), 404
+        
+        program_data = {
+            "id": student_info.program.get("program_id", 0),
+            "name": student_info.program.get("program_name", ""),
+            "european_credits": student_info.program.get("program_ec", 180)
+        }
+
+        # Format the courses data from student_info
+        formatted_grades = []
+        for i, course in enumerate(student_info.courses):
+            formatted_grade = {
+                "id": i + 1,
+                "course_id": course["id"],  
+                "grade": course["grade"],
+                "feedback": course.get("feedback", ""),
+                "created_at": str(course["created_at"]), 
+                "course": {
+                    "id": course["id"],  
+                    "name": course["course_name"],
+                    "european_credits": course["ec"],  
+                    "program_id": student_info.program.get("program_id", 0)
+                }
+            }
+            formatted_grades.append(formatted_grade)
+        
+        return jsonify({
+            "program": program_data, 
+            "grades": formatted_grades
+        })
+    
+    except Exception as e:
+        logging.error(f"Error fetching student courses: {e}")
+        return jsonify({"error": f"Server error while fetching student courses: {str(e)}"}), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
