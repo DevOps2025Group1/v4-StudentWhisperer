@@ -25,7 +25,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r backend/requirements.txt
-          pip install -r frontend/requirements.txt
           pip install ruff
 
       - name: Run ruff
@@ -46,7 +45,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r backend/requirements.txt
-          pip install -r frontend/requirements.txt
           pip install bandit
 
       - name: Run Bandit
