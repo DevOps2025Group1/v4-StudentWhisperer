@@ -1,10 +1,8 @@
 import { loginRequest } from "../config/msalConfig";
 import { msalInstance } from "../components/custom/msal-auth-provider";
 
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://studentwhisperer-backend-ca.ashybeach-eb1fae7a.westeurope.azurecontainerapps.io";
-//   "http://localhost:5000";
+// Get the API URL from runtime environment variables, fallback to build-time env vars
+const API_URL = window.ENV?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
 /**
  * Get an access token for the backend API

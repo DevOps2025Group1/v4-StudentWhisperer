@@ -10,9 +10,10 @@ import { Overview } from "@/components/custom/overview";
 import { Header } from "@/components/custom/header";
 import { Sidebar } from "@/components/custom/sidebar";
 import { Button } from "@/components/ui/button";
-import { Menu, PlusCircle } from "lucide-react";
+import { Menu, PlusCircle, User } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import { sendChatMessage } from "@/services/api";
+import { sendChatMessage, fetchStudentCourses } from "@/services/api";
+import { ProfilePopup, StudentInfo } from "@/components/custom/profile-popup";
 
 interface Chat {
   id: string;
@@ -31,6 +32,9 @@ export function Chat() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isNewChat, setIsNewChat] = useState<boolean>(true);
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(false);
 
   // Create a new temp chat when the component mounts if there are no chats
   useEffect(() => {
@@ -57,6 +61,19 @@ export function Chat() {
       setIsNewChat(false);
     }
   }, [activeChat, chats, tempChat]);
+
+  // Load student data if the user is authenticated
+  useEffect(() => {
+    const authUser = localStorage.getItem('auth_user');
+    if (authUser && !studentInfo) {
+      try {
+        const user = JSON.parse(authUser);
+        loadStudentData(user.email);
+      } catch (error) {
+        console.error("Failed to parse auth_user:", error);
+      }
+    }
+  }, []);
 
   // Create a new chat
   const createNewChat = () => {
@@ -237,6 +254,62 @@ export function Chat() {
     }
   }
 
+  /*
+   * Function to load student data from the API
+   */
+  const loadStudentData = async (email: string) => {
+    setIsLoadingProfile(true);
+    try {
+      const authUser = localStorage.getItem('auth_user');
+      if (!authUser) return;
+      
+      const user = JSON.parse(authUser);
+      
+      // Fetch student data including courses, grades, and program
+      const studentData = await fetchStudentCourses(email);
+      
+      // Create proper structure for the profile popup
+      setStudentInfo({
+        name: user.name || "Student",
+        email: user.email,
+        // Check for various possible structures from the API
+        program: studentData.program || studentData.student?.program || null,
+        grades: studentData.grades || 
+                studentData.student?.grades || 
+                []
+      });
+    } catch (error) {
+      console.error("Error loading student data:", error);
+      // Set empty data so we can at least show the profile
+      setStudentInfo({
+        name: JSON.parse(localStorage.getItem('auth_user') || '{}').name || "Student",
+        email: email,
+        grades: []
+      });
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  /* 
+   * Function to toggle the profile popup
+   */
+  const toggleProfile = () => {
+    // If opening profile and we don't have data yet, try to load it
+    if (!isProfileOpen && !studentInfo) {
+      const authUser = localStorage.getItem('auth_user');
+      if (authUser) {
+        try {
+          const user = JSON.parse(authUser);
+          loadStudentData(user.email);
+        } catch (error) {
+          console.error("Failed to parse auth_user:", error);
+        }
+      }
+    }
+    setIsProfileOpen(!isProfileOpen);
+  };
+
   // Get all chats for display in sidebar (only show chats with messages)
   const getDisplayChats = () => {
     return chats;
@@ -263,7 +336,25 @@ export function Chat() {
             <PlusCircle className="h-4 w-4" />
           </Button>
         </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={toggleProfile}
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-full"
+          >
+            <User className="h-4 w-4" />
+          </Button>
+        </div>
       </Header>
+
+      {isProfileOpen && (
+        <ProfilePopup 
+          studentInfo={studentInfo} 
+          isLoading={isLoadingProfile} 
+          onClose={() => setIsProfileOpen(false)}
+        />
+      )}
 
       <Sidebar 
         isOpen={isSidebarOpen} 
