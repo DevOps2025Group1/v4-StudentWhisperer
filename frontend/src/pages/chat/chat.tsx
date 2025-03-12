@@ -13,41 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Menu, PlusCircle, User } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { sendChatMessage, fetchStudentCourses } from "@/services/api";
-import { ProfilePopup } from "@/components/custom/profile-popup";
+import { ProfilePopup, StudentInfo } from "@/components/custom/profile-popup";
 
 interface Chat {
   id: string;
   name: string;
   messages: message[];
-}
-
-interface Course {
-  id: number;
-  name: string;
-  european_credits: number;
-  program_id: number;
-}
-
-interface Grade {
-  id: number;
-  course_id: number;
-  grade: string;
-  feedback?: string;
-  created_at: string;
-  course: Course;
-}
-
-interface Program {
-  id: number;
-  name: string;
-  european_credits: number;
-}
-
-interface StudentInfo {
-  name: string;
-  email: string;
-  program?: Program;
-  grades: Grade[];
 }
 
 export function Chat() {

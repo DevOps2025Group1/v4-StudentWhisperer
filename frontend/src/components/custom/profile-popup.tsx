@@ -23,7 +23,7 @@ interface Program {
   european_credits: number;
 }
 
-interface StudentInfo {
+export interface StudentInfo {
   name: string;
   email: string;
   program?: Program;
