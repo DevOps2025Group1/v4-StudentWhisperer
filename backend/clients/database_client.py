@@ -52,33 +52,22 @@ class DatabaseClient:
         return Student(student_id, name, email, courses, program)
 
 
-    def add_new_student(self, name: str, email: str, password: str, program_id: int = None) -> Student:
+    def add_new_student(self, name: str, email: str, password: str) -> Student:
         """Add a new student to the database."""
         query = """
-        INSERT INTO dbo.Student (name, email, password, program_id)
+        INSERT INTO dbo.Student (name, email, password)
         OUTPUT INSERTED.id
-        VALUES (?, ?, ?, ?);
+        VALUES (?, ?, ?);
         """
 
         with self.conn.cursor() as cursor:
-            cursor.execute(query, (name, email, password, program_id))
+            cursor.execute(query, (name, email, password))
             student_id = cursor.fetchone()[0]
             cursor.commit()
-
-        program = None
-        if program_id:
-            program_query = "SELECT id, name FROM dbo.Program WHERE id = ?;"
-            cursor.execute(program_query, (program_id,))
-            prog_result = cursor.fetchone()
-            if prog_result:
-                program = {
-                    "program_id": prog_result[0],
-                    "program_name": prog_result[1]
-                }
-                
+            
         self.add_demo_student_data(student_id)
 
-        return Student(student_id, name, email, program)
+        return Student(student_id, name, email)
     
     def add_demo_student_data(self, student_id: int):
         """Connect demo courses and grades to the specified student."""

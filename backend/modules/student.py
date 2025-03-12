@@ -6,7 +6,7 @@ class Student:
         self.name = name
         self.email = email
         self.courses = courses
-        self.program = program if program else {}
+        self.program = program or {}
 
     def __repr__(self) -> str:
         return f"Student(id={self.student_id}, name={self.name}, email={self.email}, courses={self.courses}, program={self.program})"
