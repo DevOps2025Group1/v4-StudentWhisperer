@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
-import requests
 import tiktoken
 
 
