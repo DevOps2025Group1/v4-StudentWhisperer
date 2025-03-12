@@ -266,14 +266,11 @@ export async function getCurrentUser() {
   }
 }
 
-
 /* 
  * Fetch student data from the backend
  */
 export async function fetchStudentCourses(email: string) {
-  try {
-    console.log(`Fetching student data for ${email} from ${API_URL}/api/student/courses`);
-    
+  try {    
     const response = await fetch(`${API_URL}/api/student/courses?email=${encodeURIComponent(email)}`, {
       method: 'GET',
       headers: createAuthHeaders(),
@@ -284,7 +281,6 @@ export async function fetchStudentCourses(email: string) {
     }
 
     const data = await response.json();
-    console.log("API response:", data);
     return data;
   } catch (error) {
     console.error('Error fetching student courses:', error);

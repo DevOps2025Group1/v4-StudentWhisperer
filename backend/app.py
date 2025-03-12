@@ -256,6 +256,7 @@ def get_user_info():
     )
 
 
+# Endpoint for collecting student courses
 @app.route('/api/student/courses', methods=['GET'])
 @token_required
 def get_student_courses():
@@ -265,12 +266,10 @@ def get_student_courses():
         if not email:
             return jsonify({"error": "Email parameter is required"}), 400
         
-        # Fetch student data including program information
         student_info = db.get_student_info(email)
         if not student_info:
             return jsonify({"error": "Student not found"}), 404
         
-        # Use the actual program data from student_info
         program_data = {
             "id": student_info.program.get("program_id", 0),
             "name": student_info.program.get("program_name", ""),
@@ -281,8 +280,8 @@ def get_student_courses():
         formatted_grades = []
         for i, course in enumerate(student_info.courses):
             formatted_grade = {
-                "id": course["id"],
-                "course_id": i + 100,  
+                "id": i + 1,
+                "course_id": course["id"],  
                 "grade": course["grade"],
                 "feedback": course.get("feedback", ""),
                 "created_at": str(course["created_at"]), 

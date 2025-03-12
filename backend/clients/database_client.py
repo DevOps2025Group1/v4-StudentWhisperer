@@ -45,7 +45,7 @@ class DatabaseClient:
         program = {
             "program_id": results[0][9],
             "program_name": results[0][10], 
-            "european_credits": results[0][11]
+            "program_ec": results[0][11]
         }
 
         return Student(student_id, name, email, courses, program)
