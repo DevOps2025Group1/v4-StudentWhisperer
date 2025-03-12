@@ -2,6 +2,7 @@ import "./App.css";
 import { Chat } from "./pages/chat/chat";
 import { Register } from "./pages/register/register";
 import { Login } from "./pages/login/login";
+import { Admin } from "./pages/admin/admin";
 import {
   BrowserRouter as Router,
   Routes,
@@ -32,6 +33,7 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
