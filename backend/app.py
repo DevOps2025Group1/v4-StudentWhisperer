@@ -329,3 +329,108 @@ def get_student_courses():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
+
+# Endpoint to update user email
+@app.route('/api/student/update-email', methods=['PUT'])
+@token_required
+def update_email():
+    try:
+        data = request.json
+        
+        # Validate required input
+        if not data or not data.get("currentEmail") or not data.get("newEmail") or not data.get("password"):
+            return jsonify({
+                "status": "error", 
+                "message": "Missing required fields: currentEmail, newEmail, password"
+            }), 400
+        
+        current_email = data.get("currentEmail")
+        new_email = data.get("newEmail")
+        password = data.get("password")
+        
+        # Verify the user owns this account (through token)
+        if current_email != request.current_user["email"]:
+            return jsonify({"status": "error", "message": "Not authorized to update this account"}), 403
+        
+        # Check if the new email already exists
+        if db.email_already_exist(new_email) and new_email != current_email:
+            return jsonify({"status": "error", "message": "Email address already in use"}), 409
+        
+        # Verify the current password
+        if not db.check_user_login(current_email, password):
+            return jsonify({"status": "error", "message": "Invalid password"}), 401
+        
+        # Update the email in the database
+        success = db.update_student_email(current_email, new_email)
+        
+        if not success:
+            return jsonify({"status": "error", "message": "Failed to update email"}), 500
+        
+        # Generate new JWT token with updated email
+        token_expiry = datetime.now() + timedelta(hours=24)
+        token = jwt.encode(
+            {"email": new_email, "name": request.current_user["name"], "exp": token_expiry},
+            app.config["SECRET_KEY"],
+            algorithm="HS256",
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": "Email updated successfully",
+            "token": token,
+            "user": {"email": new_email, "name": request.current_user["name"]}
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating email: {e}")
+        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
+
+# Endpoint to update user password
+@app.route('/api/student/update-password', methods=['PUT'])
+@token_required
+def update_password():
+    try:
+        data = request.json
+        
+        # Validate required input
+        if not data or not data.get("email") or not data.get("currentPassword") or not data.get("newPassword"):
+            return jsonify({
+                "status": "error", 
+                "message": "Missing required fields: email, currentPassword, newPassword"
+            }), 400
+        
+        email = data.get("email")
+        current_password = data.get("currentPassword")
+        new_password = data.get("newPassword")
+        
+        # Verify the user owns this account (through token)
+        if email != request.current_user["email"]:
+            return jsonify({"status": "error", "message": "Not authorized to update this account"}), 403
+        
+        # Verify the current password
+        if not db.check_user_login(email, current_password):
+            return jsonify({"status": "error", "message": "Current password is incorrect"}), 401
+        
+        # Hash the new password
+        hashed_password = generate_password_hash(new_password)
+        
+        # Update the password in the database
+        success = db.update_student_password(email, hashed_password)
+        
+        if not success:
+            return jsonify({"status": "error", "message": "Failed to update password"}), 500
+        
+        return jsonify({
+            "status": "success",
+            "message": "Password updated successfully"
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating password: {e}")
+        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)

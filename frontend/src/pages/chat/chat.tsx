@@ -292,6 +292,22 @@ export function Chat() {
   };
 
   /* 
+   * Function to handle profile information updates (like email change)
+   */
+  const handleProfileInfoUpdate = (newEmail: string) => {
+    // If the student info exists, update it with the new email
+    if (studentInfo) {
+      setStudentInfo({
+        ...studentInfo,
+        email: newEmail
+      });
+    }
+
+    // Refetch student data with the new email to ensure we have the latest data
+    loadStudentData(newEmail);
+  };
+
+  /* 
    * Function to toggle the profile popup
    */
   const toggleProfile = () => {
@@ -353,6 +369,7 @@ export function Chat() {
           studentInfo={studentInfo} 
           isLoading={isLoadingProfile} 
           onClose={() => setIsProfileOpen(false)}
+          onInfoUpdate={handleProfileInfoUpdate} 
         />
       )}
 
