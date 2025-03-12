@@ -330,33 +330,7 @@ def get_student_courses():
 @app.route("/api/metrics", methods=["GET"])
 @token_required
 def metrics():
-    subscription_id = "5bab2ebd-b16a-469d-8aa4-abdaea7f9e17"
-    resource_group = "devops-student-portal-app-rg"
-    resource_name = "devops-student-portal-app-openai"
-
-    try:
-        # Fetch token usage information from Azure AI services
-        azure_api_url = (
-            f'https://management.azure.com/subscriptions/{subscription_id}/resourceGroups/{resource_group}'
-            f'/providers/Microsoft.CognitiveServices/accounts/{resource_name}/providers/microsoft.insights/metrics'
-            f'?metricnames={"AzureOpenAIRequests"}&timespan={"PT1H"}&api-version={"2021-04-01"}'
-        )
-        headers = {
-            "Authorization": f"Bearer {os.getenv('azure-openai-api-key')}"
-        }
-        response = requests.get(azure_api_url, headers=headers)
-        response.raise_for_status()
-        metrics_info = response.json()
-
-        return jsonify({
-            "status": "success",
-            "message": "Metrics endpoint",
-            "metrics": metrics_info
-        })
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching metrics from Azure API: {e}")
-        return jsonify({"error": f"Server error while fetching metrics: {str(e)}"}), 500
-
+    return jsonify({"status": "success", "message": "Metrics endpoint"})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
