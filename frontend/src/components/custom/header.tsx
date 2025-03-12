@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useMsal } from "@azure/msal-react";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Settings } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { ProfilePopup, StudentInfo } from "./profile-popup";
 import { fetchStudentCourses } from "@/services/api";
@@ -150,6 +150,16 @@ export const Header = ({ children, rightSection }: HeaderProps) => {
           <div className="flex items-center gap-2">
             {user && (
               <>
+                {user.student_id === 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 rounded-full"
+                    onClick={() => navigate('/admin')}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

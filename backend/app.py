@@ -19,6 +19,8 @@ import requests
 import tiktoken
 
 
+ADMIN_USER_ID = 1
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -343,6 +345,9 @@ def get_student_courses():
 @app.route("/api/metrics", methods=["GET"])
 @token_required
 def metrics():
+    if request.cookies.get("student_id") != str(ADMIN_USER_ID):
+        return jsonify({"error": "Not authorized"}), 403
+
     return jsonify(db.get_user_token_usage())
 
 # Endpoint to update user email
