@@ -15,10 +15,10 @@ class DatabaseClient:
         """Initialize and return a database connection using credentials from st.secrets."""
         connection_str = (
             "DRIVER={ODBC Driver 17 for SQL Server};"
-            "SERVER=" + os.environ["SQL_SERVER"] + ";"
-            "DATABASE=" + os.environ["SQL_DB"] + ";"
-            "UID=" + os.environ["SQL_USER"] + ";"
-            "PWD=" + os.environ["SQL_PASSWORD"]
+            "SERVER=" + os.environ["sql-server"] + ";"
+            "DATABASE=" + os.environ["sql-db"] + ";"
+            "UID=" + os.environ["sql-user"] + ";"
+            "PWD=" + os.environ["sql-password"]
         )
         return pyodbc.connect(connection_str)
 

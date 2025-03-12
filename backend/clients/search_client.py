@@ -18,10 +18,10 @@ class AzureSearchClient:
 
     def __init__(self):
         load_dotenv()
-        self.service_endpoint = os.environ.get("AZURE_SEARCH_SERVICE_ENDPOINT")
-        self.index_name = os.environ.get("AZURE_SEARCH_INDEX")
-        self.key = os.environ.get("AZURE_SEARCH_ADMIN_KEY")
-        self.semantic_config_name = os.environ.get("AZURE_SEARCH_SEMANTIC_CONFIG")
+        self.service_endpoint = os.environ.get("azure-search-service-endpoint")
+        self.index_name = os.environ.get("azure-search-index")
+        self.key = os.environ.get("azure-search-admin-key")
+        self.semantic_config_name = os.environ.get("azure-search-semantic-config")
 
         self.client = SearchClient(
             self.service_endpoint, self.index_name, AzureKeyCredential(self.key)
