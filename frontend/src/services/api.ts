@@ -279,7 +279,7 @@ export async function getCurrentUser() {
  * Fetch student data from the backend
  */
 export async function fetchStudentCourses(email: string) {
-  try {    
+  try {
     const response = await fetch(`${API_URL}/api/student/courses?email=${encodeURIComponent(email)}`, {
       method: 'GET',
       headers: createAuthHeaders(),
@@ -295,5 +295,27 @@ export async function fetchStudentCourses(email: string) {
     console.error('Error fetching student courses:', error);
     // Return empty data structure to prevent undefined errors
     return { program: null, grades: [] };
+  }
+}
+
+/**
+ * Fetch metrics from the backend
+ */
+export async function fetchMetrics() {
+  try {
+    const response = await fetch(
+      '/api/metrics',
+      {
+        credentials: 'include',
+        headers: createAuthHeaders()
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch metrics');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    throw error;
   }
 }
