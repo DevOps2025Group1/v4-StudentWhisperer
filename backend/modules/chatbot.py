@@ -24,10 +24,10 @@ class OpenAIChatbot:
             ),
         }
 
-    def generate_response(self, prompt: str, user_email: str, chat_history: list) -> str:
+    def generate_response(self, prompt: str, student_id: int, chat_history: list) -> str:
         """Generate a response including session chat history."""
         # Retrieve student information
-        student = self.database_client.get_student_info(user_email)
+        student = self.database_client.get_student_info(student_id)
         student_context = (
             f"Student Information:\n"
             f"- Name: {student.name}\n"

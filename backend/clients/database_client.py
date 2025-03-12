@@ -22,7 +22,7 @@ class DatabaseClient:
         )
         return pyodbc.connect(connection_str)
 
-    def get_student_info(self, email: str) -> Optional[Student]:
+    def get_student_info(self, student_id: int) -> Optional[Student]:
         """Retrieve student information including courses, grades, and program."""
         query = """
         SELECT s.id, s.name, s.email, c.name, g.grade, c.european_credits, c.id, g.created_at, g.feedback,
@@ -31,11 +31,11 @@ class DatabaseClient:
         LEFT JOIN dbo.Grade g ON s.id = g.student_id
         LEFT JOIN dbo.Course c ON g.course_id = c.id
         LEFT JOIN dbo.Program p ON s.program_id = p.id
-        WHERE s.email = ?;
+        WHERE s.id = ?;
         """
 
         with self.conn.cursor() as cursor:
-            cursor.execute(query, (email,))
+            cursor.execute(query, (student_id,))
             results = cursor.fetchall()
 
         if not results:
@@ -100,7 +100,7 @@ class DatabaseClient:
 
     def check_user_login(self, email: str, password: str):
         query = """
-        SELECT name, password
+        SELECT name, password, id
         FROM dbo.Student
         WHERE email = ?;
         """
@@ -109,12 +109,8 @@ class DatabaseClient:
             cursor.execute(query, (email,))
             result = cursor.fetchone()
 
-            return check_password_hash(result[1], password)
-
-        if not result:
-            return False
-
-        return True
+            if check_password_hash(result[1], password):
+                return result[2]
 
     def email_already_exist(self, email: str):
         query = """
@@ -131,6 +127,32 @@ class DatabaseClient:
             return False
 
         return True
+    
+    def get_user_token_usage(self):
+        query = """
+        SELECT s.email, SUM(tu.tokens) AS total_tokens_used
+        FROM Tokenusage tu
+        JOIN dbo.student s ON tu.student_id = s.id
+        WHERE tu.date_time >= DATEADD(HOUR, -24, GETDATE())
+        GROUP BY s.email;
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(query)
+            results = cursor.fetchall()
+
+        # Return results in a dictionary format
+        return {row[0]: row[1] for row in results}
+    
+    def add_token_usage(self, student_id: int, tokens: int):
+        query = """
+        INSERT INTO Tokenusage (student_id, tokens)
+        VALUES (?, ?);
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (student_id, tokens))
+            cursor.commit()
 
     def add_to_chat_hostory():
         pass

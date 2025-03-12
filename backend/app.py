@@ -16,6 +16,7 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
+import tiktoken
 
 
 # Configure logging
@@ -38,6 +39,8 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key")
 
 Session(app)
 CORS(app, supports_credentials=True)
+
+TOKEN_ENCODER = tiktoken.encoding_for_model("gpt-4o")
 
 # Sample data - in a real app, this might come from a database
 sample_messages = [
@@ -130,11 +133,11 @@ def login():
         )
 
     email = data.get("email")
-
     password = data.get("password")
 
     # Verify password
-    if not db.check_user_login(email, password):
+    student_id = db.check_user_login(email, password)
+    if not student_id:
         return jsonify({"status": "error", "message": "Invalid email or password"}), 401
 
     # Generate JWT token
@@ -145,14 +148,25 @@ def login():
         algorithm="HS256",
     )
 
-    return jsonify(
+    response = make_response(jsonify(
         {
             "status": "success",
             "message": "Login successful",
             "token": token,
-            "user": {"email": email},
+            "user": {"email": email, "student_id": student_id},
         }
+    ))
+
+    # Set user_id in http-only to securely determine the current user
+    response.set_cookie(
+        "student_id",
+        str(student_id),
+        httponly=True,
+        samesite="Lax",
+        secure=False
     )
+
+    return response
 
 
 # Azure AD authentication endpoint
@@ -208,25 +222,19 @@ def echo():
 @app.route("/api/chat", methods=["POST"])
 @token_required
 def chat():
-
     data = request.json
     prompt = data.get("message", "")
     chatbot = OpenAIChatbot()
 
-    user_email = request.current_user["email"]
+    student_id = request.cookies.get("student_id")
 
     chat_history = session.get("chat_history", [])
-
-    print(f"🔹 Incoming Cookies: {request.cookies}", flush=True)
-    print(f"🔹 Before Update - Session ID: {session.sid}", flush=True)
-
-    response_content = chatbot.generate_response(prompt, user_email, chat_history)
+    response_content = chatbot.generate_response(prompt, student_id, chat_history)
 
     chat_history.append({"role": "user", "content": prompt})
     chat_history.append({"role": "assistant", "content": response_content})
 
     session["chat_history"] = chat_history[-10:]
-    print(f"🔹 Updated Chat History: {session['chat_history']}", flush=True)
     session.modified = True
 
     # Create response and explicitly set session cookie
@@ -238,6 +246,12 @@ def chat():
         samesite="Lax",
         secure=False
     )
+
+    input_tokens = TOKEN_ENCODER.encode(prompt)
+    output_tokens = TOKEN_ENCODER.encode(response_content)
+    total_tokens = len(input_tokens) + len(output_tokens)
+    
+    db.add_token_usage(student_id, total_tokens)
 
     return response
 
@@ -284,12 +298,11 @@ def get_user_info():
 @token_required
 def get_student_courses():
     try:
-        # Get email from query parameter
-        email = request.args.get('email')
-        if not email:
+        student_id = request.cookies.get("student_id")
+        if not student_id:
             return jsonify({"error": "Email parameter is required"}), 400
         
-        student_info = db.get_student_info(email)
+        student_info = db.get_student_info(student_id)
         if not student_info:
             return jsonify({"error": "Student not found"}), 404
         
@@ -330,7 +343,7 @@ def get_student_courses():
 @app.route("/api/metrics", methods=["GET"])
 @token_required
 def metrics():
-    return jsonify({"status": "success", "message": "Metrics endpoint"})
+    return jsonify(db.get_user_token_usage())
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

@@ -127,6 +127,7 @@ export async function loginUser(userData: LoginUserData) {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify(userData),
     });
 
@@ -282,6 +283,7 @@ export async function fetchStudentCourses(email: string) {
   try {
     const response = await fetch(`${API_URL}/api/student/courses?email=${encodeURIComponent(email)}`, {
       method: 'GET',
+      credentials: 'include',
       headers: createAuthHeaders(),
     });
 
