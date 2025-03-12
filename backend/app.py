@@ -120,6 +120,7 @@ def login():
         )
 
     email = data.get("email")
+
     password = data.get("password")
 
     # Verify password
@@ -129,7 +130,7 @@ def login():
     # Generate JWT token
     token_expiry = datetime.now() + timedelta(hours=24)
     token = jwt.encode(
-        {"email": email, "name": email, "exp": token_expiry},
+        {"email": email, "exp": token_expiry},
         app.config["SECRET_KEY"],
         algorithm="HS256",
     )
@@ -139,7 +140,7 @@ def login():
             "status": "success",
             "message": "Login successful",
             "token": token,
-            "user": {"email": email, "name": email},
+            "user": {"email": email},
         }
     )
 
@@ -203,17 +204,19 @@ def echo():
 def chat():
     """Simulate a chat response - requires authentication"""
     data = request.json
-    print(data, flush=True)
+    # print(data, flush= True) # | {'message': ''}
     prompt = data.get('message', '')
     chatbot = OpenAIChatbot()
 
+    print(request.current_user, flush= True)
+
     # You can use the user info in request.current_user for personalized responses
     user_email = request.current_user["email"]
+    # print(user_email, flush= True)
 
     response = {
         "role": "assistant",
-        "content": chatbot.generate_response(prompt, user_email),
-        "user": user_email,  # Optionally include user info in the response
+        "content": chatbot.generate_response(prompt, user_email)
     }
 
     return jsonify({"response": response})

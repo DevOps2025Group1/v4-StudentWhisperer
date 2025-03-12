@@ -27,8 +27,8 @@ class DatabaseClient:
         query = """
         SELECT s.id, s.name, s.email, c.name AS course_name, g.grade, g.created_at, g.feedback
         FROM dbo.Student s
-        JOIN dbo.Grade g ON s.id = g.student_id
-        JOIN dbo.Course c ON g.course_id = c.id
+        LEFT JOIN dbo.Grade g ON s.id = g.student_id
+        LEFT JOIN dbo.Course c ON g.course_id = c.id
         WHERE s.email = ?;
         """
 
@@ -40,7 +40,7 @@ class DatabaseClient:
             return None
 
         student_id, name, email = results[0][:3]
-        courses = [{"course_name": row[3], "grade": row[4]} for row in results]
+        courses = [{"course_name": row[3], "grade": row[4]} for row in results if row[3] is not None]
 
         return Student(student_id, name, email, courses)
 
@@ -60,7 +60,7 @@ class DatabaseClient:
         self.add_demo_student_data(student_id)
 
         return Student(student_id, name, email, [])
-    
+
     def add_demo_student_data(self, student_id: int):
         """Connect demo courses and grades to the specified student."""
 

@@ -28,6 +28,8 @@ class OpenAIChatbot:
         """Generate a response for the given prompt."""
         # Retrieve student information
         student = self.database_client.get_student_info(user_email)
+        print(user_email, flush= True)
+        print(student, flush= True)
         student_context = (
             f"Student Information:\n"
             f"- Name: {student.name}\n"
