@@ -3,7 +3,6 @@ import jwt
 import logging
 import clients.database_client as database_client
 from auth import (
-    verify_azure_token,
     require_azure_auth,
     token_required,
     exchange_azure_token,
@@ -14,7 +13,7 @@ from flask_session import Session
 from dotenv import load_dotenv
 from flask_cors import CORS
 from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash
 
 
 # Configure logging

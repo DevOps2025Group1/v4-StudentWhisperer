@@ -98,7 +98,7 @@ def verify_azure_token(token=None):
                 audience=CLIENT_ID,
                 verify=True,
             )
-        except Exception as e:
+        except Exception:
             decoded = jwt.decode(
                 token,
                 key=signing_key,
