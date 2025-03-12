@@ -15,10 +15,10 @@ class DatabaseClient:
         """Initialize and return a database connection using credentials from st.secrets."""
         connection_str = (
             "DRIVER={ODBC Driver 17 for SQL Server};"
-            "SERVER=" + os.environ["SQL_SERVER"] + ";"
-            "DATABASE=" + os.environ["SQL_DB"] + ";"
-            "UID=" + os.environ["SQL_USER"] + ";"
-            "PWD=" + os.environ["SQL_PASSWORD"]
+            "SERVER=" + os.environ["sql-server"] + ";"
+            "DATABASE=" + os.environ["sql-db"] + ";"
+            "UID=" + os.environ["sql-user"] + ";"
+            "PWD=" + os.environ["sql-password"]
         )
         return pyodbc.connect(connection_str)
 
@@ -28,9 +28,9 @@ class DatabaseClient:
         SELECT s.id, s.name, s.email, c.name, g.grade, c.european_credits, c.id, g.created_at, g.feedback,
                p.id, p.name, p.european_credits 
         FROM dbo.Student s
-        JOIN dbo.Grade g ON s.id = g.student_id
-        JOIN dbo.Course c ON g.course_id = c.id
-        JOIN dbo.Program p ON s.program_id = p.id
+        LEFT JOIN dbo.Grade g ON s.id = g.student_id
+        LEFT JOIN dbo.Course c ON g.course_id = c.id
+        LEFT JOIN dbo.Program p ON s.program_id = p.id
         WHERE s.email = ?;
         """
 
@@ -50,7 +50,6 @@ class DatabaseClient:
         }
 
         return Student(student_id, name, email, courses, program)
-
 
     def add_new_student(self, name: str, email: str, password: str) -> Student:
         """Add a new student to the database."""
@@ -132,3 +131,9 @@ class DatabaseClient:
             return False
 
         return True
+
+    def add_to_chat_hostory():
+        pass
+
+    def get_chat_history():
+        pass

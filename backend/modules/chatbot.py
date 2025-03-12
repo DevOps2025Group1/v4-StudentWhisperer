@@ -24,8 +24,8 @@ class OpenAIChatbot:
             ),
         }
 
-    def generate_response(self, prompt: str, user_email: str) -> str:
-        """Generate a response for the given prompt."""
+    def generate_response(self, prompt: str, user_email: str, chat_history: list) -> str:
+        """Generate a response including session chat history."""
         # Retrieve student information
         student = self.database_client.get_student_info(user_email)
         student_context = (
@@ -36,27 +36,26 @@ class OpenAIChatbot:
         )
 
         for course in student.courses:
-            student_context += (
-                f"  - {course['course_name']}: {course['grade']}\n"
-            )
+            student_context += f"  - {course['course_name']}: {course['grade']}\n"
 
         # Search for relevant context
         search_results = self.search_client.search_documents(prompt)
-        context_message = (
-            {
-                "role": "system",
-                "content": f"{student_context}\nRelevant information from search:\n{search_results}",
-            }
-            if search_results.strip()
-            else None
-        )
+        context_message = {
+            "role": "system",
+            "content": f"{student_context}\nRelevant information from search:\n{search_results}",
+        } if search_results.strip() else None
 
-        # Build messages list with system prompt
+        # Prepare message history
         messages_with_context = [self.system_prompt]
         if context_message:
             messages_with_context.append(context_message)
+
+        # Add session chat history (kept in Flask session)
+        messages_with_context.extend(chat_history)
+
+        # Append new user message
         messages_with_context.append({"role": "user", "content": prompt})
 
-        # Generate response using OpenAI API
+        # Generate response
         response = self.openai_client.generate_response(messages_with_context)
         return response
