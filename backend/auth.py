@@ -40,7 +40,7 @@ def get_jwks():
     ):
         logging.info("Fetching new JWKS keys from Microsoft")
         try:
-            response = requests.get(JWKS_URL)
+            response = requests.get(JWKS_URL, timeout=15)
             response.raise_for_status()  # Raises an HTTPError for bad responses
             jwks_cache["keys"] = response.json()["keys"]
             jwks_cache["last_updated"] = datetime.now()
@@ -98,7 +98,7 @@ def verify_azure_token(token=None):
                 audience=CLIENT_ID,
                 verify=True,
             )
-        except Exception as e:
+        except Exception:
             decoded = jwt.decode(
                 token,
                 key=signing_key,

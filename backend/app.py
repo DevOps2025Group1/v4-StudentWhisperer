@@ -3,7 +3,6 @@ import jwt
 import logging
 import clients.database_client as database_client
 from auth import (
-    verify_azure_token,
     require_azure_auth,
     token_required,
     exchange_azure_token,
@@ -14,8 +13,7 @@ from flask_session import Session
 from dotenv import load_dotenv
 from flask_cors import CORS
 from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash, check_password_hash
-import requests
+from werkzeug.security import generate_password_hash
 import tiktoken
 
 
@@ -448,9 +446,3 @@ def update_password():
     except Exception as e:
         logging.error(f"Error updating password: {e}")
         return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
-
