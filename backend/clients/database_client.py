@@ -51,6 +51,7 @@ class DatabaseClient:
 
         return Student(student_id, name, email, courses, program)
 
+
     def add_new_student(self, name: str, email: str, password: str) -> Student:
         """Add a new student to the database."""
         query = """
@@ -132,8 +133,54 @@ class DatabaseClient:
 
         return True
 
-    def add_to_chat_hostory():
-        pass
+    def update_student_email(self, current_email: str, new_email: str) -> bool:
+        """Update a student's email address
+        
+        Args:
+            current_email: The student's current email
+            new_email: The new email to set
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            query = """
+            UPDATE dbo.Student
+            SET email = ?
+            WHERE email = ?;
+            """
+            with self.conn.cursor() as cursor:
+                cursor.execute(query, (new_email, current_email))
+                affected_rows = cursor.rowcount
+                cursor.commit()
+                
+            return affected_rows > 0
+        except Exception as e:
+            print(f"Error updating email: {e}")
+            return False
 
-    def get_chat_history():
-        pass
+    def update_student_password(self, email: str, hashed_password: str) -> bool:
+        """Update a student's password
+        
+        Args:
+            email: The student's email
+            hashed_password: The new password hash to set
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            query = """
+            UPDATE dbo.Student
+            SET password = ?
+            WHERE email = ?;
+            """
+            with self.conn.cursor() as cursor:
+                cursor.execute(query, (hashed_password, email))
+                affected_rows = cursor.rowcount
+                cursor.commit()
+                
+            return affected_rows > 0
+        except Exception as e:
+            print(f"Error updating password: {e}")
+            return False

@@ -297,3 +297,83 @@ export async function fetchStudentCourses(email: string) {
     return { program: null, grades: [] };
   }
 }
+
+/**
+ * Update user email
+ * @param currentEmail Current email of the user
+ * @param newEmail New email to set
+ * @param password Current password for verification
+ */
+export async function updateUserEmail(currentEmail: string, newEmail: string, password: string) {
+  try {
+    const response = await fetch(`${API_URL}/api/student/update-email`, {
+      method: 'PUT',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({
+        currentEmail,
+        newEmail,
+        password
+      }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.message || `Request failed with status: ${response.status}`
+      };
+    }
+    
+    return {
+      success: true,
+      message: data.message || "Email updated successfully"
+    };
+  } catch (error) {
+    console.error('Error updating email:', error);
+    return {
+      success: false,
+      error: "Failed to connect to the server"
+    };
+  }
+}
+
+/**
+ * Update user password
+ * @param email Email of the user
+ * @param currentPassword Current password
+ * @param newPassword New password to set
+ */
+export async function updateUserPassword(email: string, currentPassword: string, newPassword: string) {
+  try {
+    const response = await fetch(`${API_URL}/api/student/update-password`, {
+      method: 'PUT',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({
+        email,
+        currentPassword,
+        newPassword
+      }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.message || `Request failed with status: ${response.status}`
+      };
+    }
+    
+    return {
+      success: true,
+      message: data.message || "Password updated successfully"
+    };
+  } catch (error) {
+    console.error('Error updating password:', error);
+    return {
+      success: false,
+      error: "Failed to connect to the server"
+    };
+  }
+}
