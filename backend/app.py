@@ -1,11 +1,5 @@
-from modules.chatbot import OpenAIChatbot
-from flask import Flask, jsonify, request
-from dotenv import load_dotenv
-from flask_cors import CORS
 import os
 import jwt
-from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash, check_password_hash
 import logging
 import clients.database_client as database_client
 from auth import (
@@ -14,6 +8,14 @@ from auth import (
     token_required,
     exchange_azure_token,
 )
+from modules.chatbot import OpenAIChatbot
+from flask import Flask, jsonify, request, session, make_response
+from flask_session import Session
+from dotenv import load_dotenv
+from flask_cors import CORS
+from datetime import datetime, timedelta
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 # Configure logging
 logging.basicConfig(
@@ -24,10 +26,17 @@ load_dotenv()
 db = database_client.DatabaseClient()
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
-
-# Secret key for JWT tokens - in production, use environment variables
+# Configure Session
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_PERMANENT"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_NAME"] = "flask_chat_session"
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key")
+
+Session(app)
+CORS(app, supports_credentials=True)
 
 # Sample data - in a real app, this might come from a database
 sample_messages = [
@@ -149,8 +158,7 @@ def login():
 @app.route("/api/auth/azure-token", methods=["POST"])
 def azure_login():
     """Exchange an Azure AD token for an application token"""
-    # The actual verification and exchange happens in the exchange_azure_token function
-    # which will verify the Azure token from the Authorization header
+
     result = exchange_azure_token(
         None
     )  # Token is extracted from the header in the function
@@ -177,15 +185,12 @@ def get_messages():
     return jsonify({"messages": sample_messages})
 
 
-# Protected endpoints - authentication required
-
-
 @app.route("/api/echo", methods=["POST"])
 @token_required
 def echo():
-    """Echo back the request data"""
+
     data = request.json
-    # Include user info in the response
+
     return jsonify(
         {
             "status": "success",
@@ -202,27 +207,40 @@ def echo():
 @app.route("/api/chat", methods=["POST"])
 @token_required
 def chat():
-    """Simulate a chat response - requires authentication"""
+
     data = request.json
-    # print(data, flush= True) # | {'message': ''}
-    prompt = data.get('message', '')
+    prompt = data.get("message", "")
     chatbot = OpenAIChatbot()
 
-    print(request.current_user, flush= True)
-
-    # You can use the user info in request.current_user for personalized responses
     user_email = request.current_user["email"]
-    # print(user_email, flush= True)
 
-    response = {
-        "role": "assistant",
-        "content": chatbot.generate_response(prompt, user_email)
-    }
+    chat_history = session.get("chat_history", [])
 
-    return jsonify({"response": response})
+    print(f"🔹 Incoming Cookies: {request.cookies}", flush=True)
+    print(f"🔹 Before Update - Session ID: {session.sid}", flush=True)
+
+    response_content = chatbot.generate_response(prompt, user_email, chat_history)
+
+    chat_history.append({"role": "user", "content": prompt})
+    chat_history.append({"role": "assistant", "content": response_content})
+
+    session["chat_history"] = chat_history[-10:]
+    print(f"🔹 Updated Chat History: {session['chat_history']}", flush=True)
+    session.modified = True
+
+    # Create response and explicitly set session cookie
+    response = make_response(jsonify({"response": {"role": "assistant", "content": response_content}}))
+    response.set_cookie(
+        "flask_chat_session",
+        session.sid,
+        httponly=True,
+        samesite="Lax",
+        secure=False
+    )
+
+    return response
 
 
-# New protected endpoint using Azure AD authentication
 @app.route("/api/protected", methods=["GET"])
 @require_azure_auth
 def protected_endpoint():

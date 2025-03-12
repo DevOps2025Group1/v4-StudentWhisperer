@@ -124,3 +124,9 @@ class DatabaseClient:
             return False
 
         return True
+
+    def add_to_chat_hostory():
+        pass
+
+    def get_chat_history():
+        pass

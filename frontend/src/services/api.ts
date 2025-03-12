@@ -164,6 +164,7 @@ export async function sendChatMessage(message: string) {
   try {
     const response = await fetch(`${API_URL}/api/chat`, {
       method: "POST",
+      credentials: "include",
       headers: createAuthHeaders(),
       body: JSON.stringify({ message }),
     });
