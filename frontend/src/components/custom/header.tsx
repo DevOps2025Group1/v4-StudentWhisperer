@@ -163,7 +163,6 @@ export const Header = ({
 
   // Function to handle theme toggle and close dropdown
   const handleThemeToggle = () => {
-    setIsDropdownOpen(false); // Close dropdown when toggling theme
     toggleTheme();
   };
 
