@@ -306,7 +306,7 @@ export async function fetchStudentCourses(email: string) {
 export async function fetchMetrics() {
   try {
     const response = await fetch(
-      '/api/metrics',
+      `${API_URL}/api/metrics`,
       {
         credentials: 'include',
         headers: createAuthHeaders()
