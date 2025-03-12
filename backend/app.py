@@ -98,7 +98,7 @@ def register():
     hashed_password = generate_password_hash(data.get("password"))
 
     student = db.add_new_student(name, email, hashed_password)
-    
+
     # Generate JWT token, similar to login endpoint
     token_expiry = datetime.now() + timedelta(hours=24)
     token = jwt.encode(
@@ -125,7 +125,11 @@ def register():
 
     # Set user_id in http-only cookie
     response.set_cookie(
-        "student_id", str(student.student_id), httponly=True, samesite="Lax", secure=False
+        "student_id",
+        str(student.student_id),
+        httponly=True,
+        samesite="Lax",
+        secure=False,
     )
 
     return response
