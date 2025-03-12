@@ -7,7 +7,8 @@ export const msalConfig = {
   auth: {
     clientId: "a92b7d10-cce3-48d9-b794-1210c1a4e9bb",
     authority: "https://login.microsoftonline.com/common",
-    redirectUri: "http://localhost:80",
+    redirectUri:
+      window.ENV?.VITE_FRONTEND_URL || import.meta.env.VITE_FRONTEND_URL,
   },
   cache: {
     cacheLocation: "sessionStorage",
