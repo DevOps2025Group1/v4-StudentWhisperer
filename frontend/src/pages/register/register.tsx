@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Header } from "@/components/custom/header";
+import { useAuth } from "@/context/AuthContext";
 import { registerUser } from "@/services/api";
 
 export function Register() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -77,7 +79,10 @@ export function Register() {
       const result = await registerUser({ name, email, password });
       
       if (result.success) {
-        // Registration successful - redirect to chat page
+        // Registration successful - store auth token and user info
+        const { token, user } = result.data;
+        login(token, user);
+        // Redirect to chat page
         navigate("/chat");
       } else {
         // Handle registration error

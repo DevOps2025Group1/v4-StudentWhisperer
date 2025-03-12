@@ -66,9 +66,8 @@ class DatabaseClient:
             cursor.commit()
             
         self.add_demo_student_data(student_id)
+        return Student(student_id, name, email, courses=[], program={})
 
-        return Student(student_id, name, email)
-    
     def add_demo_student_data(self, student_id: int):
         """Connect demo courses and grades to the specified student."""
 
