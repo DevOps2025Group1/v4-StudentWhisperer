@@ -88,20 +88,40 @@ def register():
 
     student = db.add_new_student(name, email, hashed_password)
 
-    return (
+    # Generate JWT token, similar to login endpoint
+    token_expiry = datetime.now() + timedelta(hours=24)
+    token = jwt.encode(
+        {"email": email, "name": name, "exp": token_expiry},
+        app.config["SECRET_KEY"],
+        algorithm="HS256",
+    )
+
+    response = make_response(
         jsonify(
             {
                 "status": "success",
                 "message": "User registered successfully",
+                "token": token,
                 "user": {
                     "email": student.email,
                     "name": student.name,
-                    "id": student.student_id,
+                    "student_id": student.student_id,
                 },
             }
         ),
         201,
     )
+
+    # Set user_id in http-only cookie
+    response.set_cookie(
+        "student_id",
+        str(student.student_id),
+        httponly=True,
+        samesite="Lax",
+        secure=False,
+    )
+
+    return response
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -129,10 +149,17 @@ def login():
     if not student_id:
         return jsonify({"status": "error", "message": "Invalid email or password"}), 401
 
+    # Fetch student info to get the name
+    student_info = db.get_student_info(student_id)
+    if not student_info:
+        return jsonify({"status": "error", "message": "User data not found"}), 500
+
+    student_name = student_info.name
+
     # Generate JWT token
     token_expiry = datetime.now() + timedelta(hours=24)
     token = jwt.encode(
-        {"email": email, "exp": token_expiry},
+        {"email": email, "name": student_name, "exp": token_expiry},
         app.config["SECRET_KEY"],
         algorithm="HS256",
     )
@@ -143,7 +170,11 @@ def login():
                 "status": "success",
                 "message": "Login successful",
                 "token": token,
-                "user": {"email": email, "student_id": student_id},
+                "user": {
+                    "email": email,
+                    "student_id": student_id,
+                    "name": student_name,
+                },
             }
         )
     )
@@ -209,7 +240,6 @@ def chat():
     input_tokens = TOKEN_ENCODER.encode(prompt)
     output_tokens = TOKEN_ENCODER.encode(response_content)
     total_tokens = len(input_tokens) + len(output_tokens)
-
     db.add_token_usage(student_id, total_tokens)
 
     return response
@@ -254,6 +284,7 @@ def get_user_info():
 
 # Endpoint for collecting student courses
 @app.route("/api/student/courses", methods=["GET"])
+@app.route("/api/student/courses", methods=["GET"])
 @token_required
 def get_student_courses():
     try:
@@ -269,6 +300,7 @@ def get_student_courses():
             "id": student_info.program.get("program_id", 0),
             "name": student_info.program.get("program_name", ""),
             "european_credits": student_info.program.get("program_ec", 180),
+            "european_credits": student_info.program.get("program_ec", 180),
         }
 
         # Format the courses data from student_info
@@ -277,10 +309,13 @@ def get_student_courses():
             formatted_grade = {
                 "id": i + 1,
                 "course_id": course["id"],
+                "course_id": course["id"],
                 "grade": course["grade"],
                 "feedback": course.get("feedback", ""),
                 "created_at": str(course["created_at"]),
+                "created_at": str(course["created_at"]),
                 "course": {
+                    "id": course["id"],
                     "id": course["id"],
                     "name": course["course_name"],
                     "european_credits": course["ec"],
@@ -289,7 +324,14 @@ def get_student_courses():
             }
             formatted_grades.append(formatted_grade)
 
-        return jsonify({"program": program_data, "grades": formatted_grades})
+        return jsonify(
+            {
+                "name": student_info.name,
+                "email": student_info.email,
+                "program": program_data,
+                "grades": formatted_grades,
+            }
+        )
 
     except Exception as e:
         logging.error(f"Error fetching student courses: {e}")
@@ -312,12 +354,29 @@ def metrics():
 
 # Endpoint to update user email
 @app.route("/api/student/update-email", methods=["PUT"])
+@app.route("/api/student/update-email", methods=["PUT"])
 @token_required
 def update_email():
     try:
         data = request.json
 
         # Validate required input
+        if (
+            not data
+            or not data.get("currentEmail")
+            or not data.get("newEmail")
+            or not data.get("password")
+        ):
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Missing required fields: currentEmail, newEmail, password",
+                    }
+                ),
+                400,
+            )
+
         if (
             not data
             or not data.get("currentEmail")
@@ -350,8 +409,23 @@ def update_email():
                 403,
             )
 
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Not authorized to update this account",
+                    }
+                ),
+                403,
+            )
+
         # Check if the new email already exists
         if db.email_already_exist(new_email) and new_email != current_email:
+            return (
+                jsonify({"status": "error", "message": "Email address already in use"}),
+                409,
+            )
+
             return (
                 jsonify({"status": "error", "message": "Email address already in use"}),
                 409,
@@ -370,9 +444,19 @@ def update_email():
                 500,
             )
 
+            return (
+                jsonify({"status": "error", "message": "Failed to update email"}),
+                500,
+            )
+
         # Generate new JWT token with updated email
         token_expiry = datetime.now() + timedelta(hours=24)
         token = jwt.encode(
+            {
+                "email": new_email,
+                "name": request.current_user["name"],
+                "exp": token_expiry,
+            },
             {
                 "email": new_email,
                 "name": request.current_user["name"],
@@ -398,12 +482,29 @@ def update_email():
 
 # Endpoint to update user password
 @app.route("/api/student/update-password", methods=["PUT"])
+@app.route("/api/student/update-password", methods=["PUT"])
 @token_required
 def update_password():
     try:
         data = request.json
 
         # Validate required input
+        if (
+            not data
+            or not data.get("email")
+            or not data.get("currentPassword")
+            or not data.get("newPassword")
+        ):
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Missing required fields: email, currentPassword, newPassword",
+                    }
+                ),
+                400,
+            )
+
         if (
             not data
             or not data.get("email")

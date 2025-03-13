@@ -26,7 +26,7 @@ class DatabaseClient:
         """Retrieve student information including courses, grades, and program."""
         query = """
         SELECT s.id, s.name, s.email, c.name, g.grade, c.european_credits, c.id, g.created_at, g.feedback,
-               p.id, p.name, p.european_credits 
+               p.id, p.name, p.european_credits
         FROM dbo.Student s
         LEFT JOIN dbo.Grade g ON s.id = g.student_id
         LEFT JOIN dbo.Course c ON g.course_id = c.id
@@ -75,8 +75,7 @@ class DatabaseClient:
             cursor.commit()
 
         self.add_demo_student_data(student_id)
-
-        return Student(student_id, name, email)
+        return Student(student_id, name, email, courses=[], program={})
 
     def add_demo_student_data(self, student_id: int):
         """Connect demo courses and grades to the specified student."""
