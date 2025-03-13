@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 
+
 class OpenAIClient:
     """Client for interacting with the Azure OpenAI API to generate responses using GPT models."""
 
@@ -14,11 +15,13 @@ class OpenAIClient:
         self.client = AzureOpenAI(
             azure_endpoint=os.environ["azure-openai-endpoint"],
             api_key=os.environ["azure-openai-api-key"],
-            api_version="2024-08-01-preview"
+            api_version="2024-08-01-preview",
         )
         self.model = os.environ["azure-openai-gpt-model-deployment-id"]
 
-    def generate_response(self, messages, temperature=0.7, max_tokens=800, top_p=0.9, **kwargs):
+    def generate_response(
+        self, messages, temperature=0.7, max_tokens=800, top_p=0.9, **kwargs
+    ):
         """Generates a response from the GPT model based on the provided messages and optional parameters."""
 
         response = self.client.chat.completions.create(

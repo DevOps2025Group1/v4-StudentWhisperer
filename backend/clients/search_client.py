@@ -13,6 +13,7 @@ from azure.search.documents.models import (
 )
 from azure.core.credentials import AzureKeyCredential
 
+
 class AzureSearchClient:
     """Azure Search Client to query documents using semantic search."""
 
@@ -27,7 +28,9 @@ class AzureSearchClient:
             self.service_endpoint, self.index_name, AzureKeyCredential(self.key)
         )
 
-    def search_documents(self, query: str, k_neighbors: int = 3, top_results: int = 3) -> str:
+    def search_documents(
+        self, query: str, k_neighbors: int = 3, top_results: int = 3
+    ) -> str:
         """Performs semantic search on documents using a vectorized text query."""
         vector_query = VectorizableTextQuery(
             text=query,
@@ -46,8 +49,14 @@ class AzureSearchClient:
             top=top_results,
         )
 
-        retrieved_docs = [result.get("chunk", "") for result in results if result.get("chunk")]
-        return "\n\n".join(retrieved_docs) if retrieved_docs else "No relevant documents found."
+        retrieved_docs = [
+            result.get("chunk", "") for result in results if result.get("chunk")
+        ]
+        return (
+            "\n\n".join(retrieved_docs)
+            if retrieved_docs
+            else "No relevant documents found."
+        )
 
     def empty_method(self):
         """Placeholder method for future functionality."""

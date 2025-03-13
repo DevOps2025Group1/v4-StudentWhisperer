@@ -42,17 +42,6 @@ CORS(app, supports_credentials=True)
 
 TOKEN_ENCODER = tiktoken.encoding_for_model("gpt-4o")
 
-# Sample data - in a real app, this might come from a database
-sample_messages = [
-    {"id": "1", "role": "assistant", "content": "Hello! How can I help you today?"},
-    {"id": "2", "role": "user", "content": "Tell me about your API endpoints."},
-    {
-        "id": "3",
-        "role": "assistant",
-        "content": "I have several test endpoints available. You can use /api/messages to get sample messages, /api/echo to echo back your input, and /api/health to check the API status.",
-    },
-]
-
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
@@ -222,32 +211,6 @@ def azure_login():
     )
 
 
-# Public endpoints - no authentication required
-@app.route("/api/messages", methods=["GET"])
-def get_messages():
-    """Return sample messages"""
-    return jsonify({"messages": sample_messages})
-
-
-@app.route("/api/echo", methods=["POST"])
-@token_required
-def echo():
-
-    data = request.json
-
-    return jsonify(
-        {
-            "status": "success",
-            "message": "Echoed back data",
-            "data": data,
-            "user": {
-                "email": request.current_user["email"],
-                "name": request.current_user["name"],
-            },
-        }
-    )
-
-
 @app.route("/api/chat", methods=["POST"])
 @token_required
 def chat():
@@ -277,7 +240,6 @@ def chat():
     input_tokens = TOKEN_ENCODER.encode(prompt)
     output_tokens = TOKEN_ENCODER.encode(response_content)
     total_tokens = len(input_tokens) + len(output_tokens)
-
     db.add_token_usage(student_id, total_tokens)
 
     return response
