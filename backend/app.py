@@ -284,7 +284,6 @@ def get_user_info():
 
 # Endpoint for collecting student courses
 @app.route("/api/student/courses", methods=["GET"])
-@app.route("/api/student/courses", methods=["GET"])
 @token_required
 def get_student_courses():
     try:
@@ -350,29 +349,12 @@ def metrics():
 
 # Endpoint to update user email
 @app.route("/api/student/update-email", methods=["PUT"])
-@app.route("/api/student/update-email", methods=["PUT"])
 @token_required
 def update_email():
     try:
         data = request.json
 
         # Validate required input
-        if (
-            not data
-            or not data.get("currentEmail")
-            or not data.get("newEmail")
-            or not data.get("password")
-        ):
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Missing required fields: currentEmail, newEmail, password",
-                    }
-                ),
-                400,
-            )
-
         if (
             not data
             or not data.get("currentEmail")
@@ -405,23 +387,8 @@ def update_email():
                 403,
             )
 
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Not authorized to update this account",
-                    }
-                ),
-                403,
-            )
-
         # Check if the new email already exists
         if db.email_already_exist(new_email) and new_email != current_email:
-            return (
-                jsonify({"status": "error", "message": "Email address already in use"}),
-                409,
-            )
-
             return (
                 jsonify({"status": "error", "message": "Email address already in use"}),
                 409,
@@ -440,19 +407,9 @@ def update_email():
                 500,
             )
 
-            return (
-                jsonify({"status": "error", "message": "Failed to update email"}),
-                500,
-            )
-
         # Generate new JWT token with updated email
         token_expiry = datetime.now() + timedelta(hours=24)
         token = jwt.encode(
-            {
-                "email": new_email,
-                "name": request.current_user["name"],
-                "exp": token_expiry,
-            },
             {
                 "email": new_email,
                 "name": request.current_user["name"],
@@ -478,29 +435,12 @@ def update_email():
 
 # Endpoint to update user password
 @app.route("/api/student/update-password", methods=["PUT"])
-@app.route("/api/student/update-password", methods=["PUT"])
 @token_required
 def update_password():
     try:
         data = request.json
 
         # Validate required input
-        if (
-            not data
-            or not data.get("email")
-            or not data.get("currentPassword")
-            or not data.get("newPassword")
-        ):
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Missing required fields: email, currentPassword, newPassword",
-                    }
-                ),
-                400,
-            )
-
         if (
             not data
             or not data.get("email")
