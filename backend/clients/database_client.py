@@ -42,15 +42,24 @@ class DatabaseClient:
             return None
 
         student_id, name, email = results[0][:3]
-        courses = [{"course_name": row[3], "grade": row[4], "ec": row[5], "id": row[6], "created_at": row[7], "feedback": row[8]} for row in results]
+        courses = [
+            {
+                "course_name": row[3],
+                "grade": row[4],
+                "ec": row[5],
+                "id": row[6],
+                "created_at": row[7],
+                "feedback": row[8],
+            }
+            for row in results
+        ]
         program = {
             "program_id": results[0][9],
-            "program_name": results[0][10], 
-            "program_ec": results[0][11]
+            "program_name": results[0][10],
+            "program_ec": results[0][11],
         }
 
         return Student(student_id, name, email, courses, program)
-
 
     def add_new_student(self, name: str, email: str, password: str) -> Student:
         """Add a new student to the database."""
@@ -64,11 +73,11 @@ class DatabaseClient:
             cursor.execute(query, (name, email, password))
             student_id = cursor.fetchone()[0]
             cursor.commit()
-            
+
         self.add_demo_student_data(student_id)
 
         return Student(student_id, name, email)
-    
+
     def add_demo_student_data(self, student_id: int):
         """Connect demo courses and grades to the specified student."""
 
@@ -128,7 +137,7 @@ class DatabaseClient:
             return False
 
         return True
-    
+
     def get_user_token_usage(self):
         query = """
         SELECT s.email, SUM(tu.tokens) AS total_tokens_used
@@ -144,7 +153,7 @@ class DatabaseClient:
 
         # Return results in a dictionary format
         return {row[0]: row[1] for row in results}
-    
+
     def add_token_usage(self, student_id: int, tokens: int):
         query = """
         INSERT INTO Tokenusage (student_id, tokens)
@@ -157,11 +166,11 @@ class DatabaseClient:
 
     def update_student_email(self, current_email: str, new_email: str) -> bool:
         """Update a student's email address
-        
+
         Args:
             current_email: The student's current email
             new_email: The new email to set
-            
+
         Returns:
             bool: True if successful, False otherwise
         """
@@ -175,7 +184,7 @@ class DatabaseClient:
                 cursor.execute(query, (new_email, current_email))
                 affected_rows = cursor.rowcount
                 cursor.commit()
-                
+
             return affected_rows > 0
         except Exception as e:
             print(f"Error updating email: {e}")
@@ -183,11 +192,11 @@ class DatabaseClient:
 
     def update_student_password(self, email: str, hashed_password: str) -> bool:
         """Update a student's password
-        
+
         Args:
             email: The student's email
             hashed_password: The new password hash to set
-            
+
         Returns:
             bool: True if successful, False otherwise
         """
@@ -201,7 +210,7 @@ class DatabaseClient:
                 cursor.execute(query, (hashed_password, email))
                 affected_rows = cursor.rowcount
                 cursor.commit()
-                
+
             return affected_rows > 0
         except Exception as e:
             print(f"Error updating password: {e}")

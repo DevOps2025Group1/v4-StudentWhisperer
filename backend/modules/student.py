@@ -1,7 +1,15 @@
 from typing import List, Dict
 
+
 class Student:
-    def __init__(self, student_id: int, name: str, email: str, courses: List[Dict[str, str]], program: Dict[str, str] = None):
+    def __init__(
+        self,
+        student_id: int,
+        name: str,
+        email: str,
+        courses: List[Dict[str, str]],
+        program: Dict[str, str] = None,
+    ):
         self.student_id = student_id
         self.name = name
         self.email = email

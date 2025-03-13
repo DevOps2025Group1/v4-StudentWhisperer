@@ -24,7 +24,9 @@ class OpenAIChatbot:
             ),
         }
 
-    def generate_response(self, prompt: str, student_id: int, chat_history: list) -> str:
+    def generate_response(
+        self, prompt: str, student_id: int, chat_history: list
+    ) -> str:
         """Generate a response including session chat history."""
         # Retrieve student information
         student = self.database_client.get_student_info(student_id)
@@ -40,10 +42,14 @@ class OpenAIChatbot:
 
         # Search for relevant context
         search_results = self.search_client.search_documents(prompt)
-        context_message = {
-            "role": "system",
-            "content": f"{student_context}\nRelevant information from search:\n{search_results}",
-        } if search_results.strip() else None
+        context_message = (
+            {
+                "role": "system",
+                "content": f"{student_context}\nRelevant information from search:\n{search_results}",
+            }
+            if search_results.strip()
+            else None
+        )
 
         # Prepare message history
         messages_with_context = [self.system_prompt]

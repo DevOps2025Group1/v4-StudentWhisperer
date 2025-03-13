@@ -153,20 +153,6 @@ export async function loginUser(userData: LoginUserData) {
 }
 
 /**
- * Fetch sample messages from the backend
- */
-export async function getSampleMessages() {
-  try {
-    const response = await fetch(`${API_URL}/api/messages`);
-    const data = await response.json();
-    return data.messages;
-  } catch (error) {
-    console.error("Failed to fetch messages:", error);
-    return [];
-  }
-}
-
-/**
  * Send a message to the chat endpoint
  */
 export async function sendChatMessage(message: string) {
@@ -190,31 +176,6 @@ export async function sendChatMessage(message: string) {
   } catch (error) {
     console.error("Chat request failed:", error);
     return { error: "Failed to send message" };
-  }
-}
-
-/**
- * Echo test function
- */
-export async function echoTest(data: any) {
-  try {
-    const response = await fetch(`${API_URL}/api/echo`, {
-      method: "POST",
-      headers: createAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        return { error: "Authentication required. Please log in again." };
-      }
-      return { error: `Request failed with status: ${response.status}` };
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Echo test failed:", error);
-    return { error: "Echo request failed" };
   }
 }
 
