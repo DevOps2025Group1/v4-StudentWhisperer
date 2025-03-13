@@ -5,7 +5,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { validateToken } from "../services/api";
+import { validateToken, logoutUser } from "../services/api";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -45,7 +45,6 @@ const getInitialAuthState = (): boolean => {
 };
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  // Initialize state directly from localStorage
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
     getInitialAuthState()
   );
@@ -81,7 +80,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (savedToken && savedUser) {
           // Only verify if current state doesn't match stored state
           const storedUser = JSON.parse(savedUser);
-          if (token === savedToken && JSON.stringify(user) === JSON.stringify(storedUser)) {
+          if (
+            token === savedToken &&
+            JSON.stringify(user) === JSON.stringify(storedUser)
+          ) {
             setLoading(false);
             return;
           }
@@ -130,6 +132,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [loading, token, user]); // Add proper dependencies
 
   const login = (newToken: string, newUser: any) => {
+    // Clear any token usage data from previous user sessions
+    localStorage.removeItem("token_usage_data");
+    localStorage.removeItem("token_last_check");
+
     localStorage.setItem("auth_token", newToken);
     localStorage.setItem("auth_user", JSON.stringify(newUser));
     setToken(newToken);
@@ -138,10 +144,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setLoading(false);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call backend to clear session cookies
+      await logoutUser();
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+
+    // Clear all auth and token-related data
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_user");
     localStorage.removeItem("auth_source");
+    localStorage.removeItem("token_usage_data");
+    localStorage.removeItem("token_last_check");
+
+    // Clear state
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);

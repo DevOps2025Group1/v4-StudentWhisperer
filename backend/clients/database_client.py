@@ -4,6 +4,7 @@ from werkzeug.security import check_password_hash
 import pyodbc
 import os
 import random
+from datetime import datetime
 
 
 class DatabaseClient:
@@ -137,11 +138,47 @@ class DatabaseClient:
 
         return True
 
+    def get_monthly_token_usage(self, year=None, month=None):
+        """Get token usage per user for a specific month
+        If year and month are not provided, returns current month's data
+        """
+        if year is None or month is None:
+            current_date = datetime.now()
+            year = current_date.year
+            month = current_date.month
+
+        query = """
+        SELECT s.id, s.email, s.name, COALESCE(SUM(tu.tokens), 0) AS total_tokens_used
+        FROM dbo.student s
+        INNER JOIN Tokenusage tu
+            ON s.id = tu.student_id
+            AND YEAR(tu.date_time) = ?
+            AND MONTH(tu.date_time) = ?
+        GROUP BY s.id, s.email, s.name
+        ORDER BY s.id;
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (year, month))
+            results = cursor.fetchall()
+
+        return [
+            {
+                "student_id": row[0],
+                "email": row[1],
+                "name": row[2],
+                "tokens_used": row[3],
+            }
+            for row in results
+        ]
+
     def get_user_token_usage(self):
+        """Get token usage for all users in the last 24 hours"""
         query = """
         SELECT s.email, SUM(tu.tokens) AS total_tokens_used
-        FROM Tokenusage tu
-        JOIN dbo.student s ON tu.student_id = s.id
+        FROM dbo.student s
+        INNER JOIN Tokenusage tu
+            ON s.id = tu.student_id
         WHERE tu.date_time >= DATEADD(HOUR, -24, GETDATE())
         GROUP BY s.email;
         """
@@ -162,6 +199,134 @@ class DatabaseClient:
         with self.conn.cursor() as cursor:
             cursor.execute(query, (student_id, tokens))
             cursor.commit()
+
+    def get_active_users_count(self):
+        """Get count of active users in the system (all registered students)"""
+        query = """
+        SELECT COUNT(id) FROM dbo.Student;
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(query)
+            result = cursor.fetchone()
+
+        return result[0] if result else 0
+
+    def set_global_token_limit(self, monthly_limit: int):
+        """Set global token limit for all users"""
+        # First check if we have a token_settings table
+        check_query = """
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TokenSettings')
+        BEGIN
+            CREATE TABLE TokenSettings (
+                id INT PRIMARY KEY IDENTITY(1,1),
+                setting_name VARCHAR(100) NOT NULL,
+                setting_value INT NOT NULL,
+                updated_at DATETIME DEFAULT GETDATE()
+            );
+        END
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(check_query)
+            cursor.commit()
+
+        # Now update or insert the global limit
+        upsert_query = """
+        MERGE INTO TokenSettings AS target
+        USING (SELECT 'monthly_global_limit' AS setting_name, ? AS setting_value) AS source
+        ON target.setting_name = source.setting_name
+        WHEN MATCHED THEN
+            UPDATE SET target.setting_value = source.setting_value, target.updated_at = GETDATE()
+        WHEN NOT MATCHED THEN
+            INSERT (setting_name, setting_value)
+            VALUES (source.setting_name, source.setting_value);
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(upsert_query, (monthly_limit,))
+            cursor.commit()
+
+        return True
+
+    def get_global_token_limit(self):
+        """Get the current global monthly token limit"""
+        # First check if we have a token_settings table
+        check_query = """
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TokenSettings')
+        BEGIN
+            CREATE TABLE TokenSettings (
+                id INT PRIMARY KEY IDENTITY(1,1),
+                setting_name VARCHAR(100) NOT NULL,
+                setting_value INT NOT NULL,
+                updated_at DATETIME DEFAULT GETDATE()
+            );
+
+            INSERT INTO TokenSettings (setting_name, setting_value)
+            VALUES ('monthly_global_limit', 1000000);
+        END
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(check_query)
+            cursor.commit()
+
+        query = """
+        SELECT setting_value FROM TokenSettings
+        WHERE setting_name = 'monthly_global_limit';
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(query)
+            result = cursor.fetchone()
+
+        return result[0] if result else 1000000  # Default to 1 million tokens
+
+    def get_user_monthly_usage(self, student_id: int, year=None, month=None):
+        """Get token usage for a specific user in the current month"""
+        if year is None or month is None:
+            current_date = datetime.now()
+            year = current_date.year
+            month = current_date.month
+
+        query = """
+        SELECT COALESCE(SUM(tokens), 0) AS monthly_usage
+        FROM Tokenusage
+        WHERE student_id = ? AND YEAR(date_time) = ? AND MONTH(date_time) = ?;
+        """
+
+        with self.conn.cursor() as cursor:
+            cursor.execute(query, (student_id, year, month))
+            result = cursor.fetchone()
+
+        return result[0] if result and result[0] is not None else 0
+
+    def get_user_token_limit(self, student_id: int):
+        """Calculate a user's token limit based on the global limit and active user count"""
+        global_limit = self.get_global_token_limit()
+        active_users = self.get_active_users_count()
+
+        if active_users <= 0:
+            active_users = 1  # Prevent division by zero
+
+        # Equal distribution among users
+        per_user_limit = global_limit // active_users
+
+        return per_user_limit
+
+    def can_user_use_tokens(self, student_id: int, required_tokens: int):
+        """Check if a user can use the specified number of tokens"""
+        # Get user's monthly limit
+        user_limit = self.get_user_token_limit(student_id)
+
+        # Get user's current usage this month
+        current_usage = self.get_user_monthly_usage(student_id)
+
+        # Calculate what the total would be after this request
+        total_after_request = current_usage + required_tokens
+
+        # Allow the request if the user hasn't exceeded their limit
+        return total_after_request <= user_limit
 
     def update_student_email(self, current_email: str, new_email: str) -> bool:
         """Update a student's email address

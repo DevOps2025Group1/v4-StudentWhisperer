@@ -13,6 +13,31 @@ declare global {
 // Prioritize runtime env over build-time env
 const API_URL = window.ENV?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
+// Token usage data interfaces
+export interface TokenUsageData {
+  usage: number;
+  limit: number;
+  percentage_used: number;
+}
+
+export interface AdminTokenUsageData {
+  global_limit: number;
+  active_users: number;
+  usage_data: {
+    student_id: number;
+    email: string;
+    name: string;
+    tokens_used: number;
+  }[];
+}
+
+export interface TokenLimitData {
+  global_limit: number;
+  active_users: number;
+  per_user_limit: number;
+  status: string;
+}
+
 // User registration interface
 export interface RegisterUserData {
   name: string;
@@ -368,5 +393,127 @@ export async function updateUserPassword(
       success: false,
       error: "Failed to connect to the server",
     };
+  }
+}
+
+/**
+ * Fetch the current token usage for the authenticated user
+ */
+export async function fetchTokenUsage(): Promise<TokenUsageData> {
+  try {
+    const response = await fetch(`${API_URL}/api/tokens/usage`, {
+      method: "GET",
+      credentials: "include",
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching token usage:", error);
+    // Return default data with 0 usage to prevent UI errors
+    return { usage: 0, limit: 0, percentage_used: 0 };
+  }
+}
+
+/**
+ * Fetch token usage data for all users (admin only)
+ */
+export async function fetchAdminTokenUsage(
+  year?: number,
+  month?: number
+): Promise<AdminTokenUsageData> {
+  try {
+    let url = `${API_URL}/api/admin/tokens/usage`;
+
+    // Add query parameters if provided
+    if (year && month) {
+      url += `?year=${year}&month=${month}`;
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching admin token usage:", error);
+    // Return empty data to prevent UI errors
+    return { global_limit: 0, active_users: 0, usage_data: [] };
+  }
+}
+
+/**
+ * Get the current global token limit settings
+ */
+export async function getTokenLimit(): Promise<TokenLimitData> {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/tokens/limit`, {
+      method: "GET",
+      credentials: "include",
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching token limit:", error);
+    // Return default data to prevent UI errors
+    return {
+      global_limit: 1000000,
+      active_users: 1,
+      per_user_limit: 1000000,
+      status: "error",
+    };
+  }
+}
+
+/**
+ * Set the global token limit (admin only)
+ */
+export async function setTokenLimit(limit: number): Promise<TokenLimitData> {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/tokens/limit`, {
+      method: "POST",
+      credentials: "include",
+      headers: createAuthHeaders(),
+      body: JSON.stringify({ limit }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error setting token limit:", error);
+    throw error;
+  }
+}
+
+/**
+ * Logout user and clear session cookies
+ */
+export async function logoutUser(): Promise<void> {
+  try {
+    await fetch(`${API_URL}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      headers: createAuthHeaders(),
+    });
+  } catch (error) {
+    console.error("Logout failed:", error);
   }
 }

@@ -6,12 +6,24 @@ import { useMsal } from "@azure/msal-react";
 import { ChevronDown, LogOut, Moon, Sun, User, Settings } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { ProfilePopup, StudentInfo } from "./profile-popup";
-import { fetchStudentCourses } from "@/services/api";
+import {
+  fetchStudentCourses,
+  fetchTokenUsage,
+  TokenUsageData,
+  logoutUser,
+} from "@/services/api";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 import { useTheme } from "@/context/ThemeContext";
 
 interface HeaderProps {
@@ -33,6 +45,8 @@ export const Header = ({
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsageData | null>(null);
+  const [isLoadingTokens, setIsLoadingTokens] = useState<boolean>(false);
   const { isDarkMode, toggleTheme } = useTheme();
 
   // Check if current path is chat page
@@ -51,6 +65,39 @@ export const Header = ({
     }
   }, [user]);
 
+  // Load token usage data if user is authenticated
+  useEffect(() => {
+    if (!user) {
+      // Reset token usage state when user is not authenticated
+      setTokenUsage(null);
+      setIsLoadingTokens(false);
+      return;
+    }
+
+    const loadAndSetTokenUsage = async () => {
+      setIsLoadingTokens(true);
+      try {
+        const data = await fetchTokenUsage();
+        if (data) {
+          setTokenUsage(data);
+        }
+      } catch (err) {
+        console.error("Error fetching token usage:", err);
+        // Reset token usage on error
+        setTokenUsage(null);
+      } finally {
+        setIsLoadingTokens(false);
+      }
+    };
+
+    // Initial load
+    loadAndSetTokenUsage();
+
+    // Refresh token usage every 20 seconds for more dynamic updates
+    const interval = setInterval(loadAndSetTokenUsage, 20000);
+    return () => clearInterval(interval);
+  }, [user]); // Only depend on user changes
+
   const handleLogout = async () => {
     const isAzureADSession = localStorage.getItem("auth_source") === "azure_ad";
 
@@ -59,7 +106,14 @@ export const Header = ({
     // Set logging out state to prevent auth attempts
     localStorage.setItem("loggingOut", "true");
 
-    // Clear our app's auth state first
+    try {
+      // Call backend to clear session cookies
+      await logoutUser();
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+
+    // Clear our app's auth state
     logout();
 
     // Navigate to login immediately
@@ -185,6 +239,51 @@ export const Header = ({
     return "User";
   };
 
+  // Format the token usage for display
+  const formatTokenUsage = () => {
+    if (!tokenUsage) return "Loading...";
+
+    const { usage, limit, percentage_used } = tokenUsage;
+    return `${usage.toLocaleString()} / ${limit.toLocaleString()} tokens (${percentage_used.toFixed(
+      1
+    )}%)`;
+  };
+
+  // Determine token status
+  const getTokenStatus = () => {
+    if (!tokenUsage) return { isLow: false, isExhausted: false };
+
+    const { percentage_used } = tokenUsage;
+    return {
+      isLow: percentage_used >= 80 && percentage_used < 100,
+      isExhausted: percentage_used >= 100,
+    };
+  };
+
+  const { isLow, isExhausted } = getTokenStatus();
+
+  // Get appropriate status color for the progress bar
+  const getProgressBarClasses = () => {
+    if (isExhausted) {
+      return {
+        bg: "bg-red-100 dark:bg-red-950/50",
+        indicator: "bg-red-600 dark:bg-red-500",
+      };
+    }
+    if (isLow) {
+      return {
+        bg: "bg-amber-100 dark:bg-amber-950/50",
+        indicator: "bg-amber-600 dark:bg-amber-500",
+      };
+    }
+    return {
+      bg: "bg-slate-200 dark:bg-slate-800",
+      indicator: "bg-green-600 dark:bg-green-500",
+    };
+  };
+
+  const progressBarClasses = getProgressBarClasses();
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -196,7 +295,44 @@ export const Header = ({
               <span className="text-lg font-semibold">Student Whisperer</span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-3">
+            {/* Token usage progress bar (only for authenticated users) */}
+            {user && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-32 h-6 flex items-center">
+                      {isLoadingTokens && !tokenUsage ? (
+                        <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                      ) : (
+                        <Progress
+                          value={tokenUsage?.percentage_used || 0}
+                          className={`h-2 w-full border ${progressBarClasses.bg}`}
+                          indicatorClassName={progressBarClasses.indicator}
+                        />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs font-medium">
+                      Monthly Token Usage: {formatTokenUsage()}
+                    </p>
+                    {isExhausted && (
+                      <p className="text-xs text-red-500 font-medium mt-1">
+                        You have reached your monthly token limit
+                      </p>
+                    )}
+                    {isLow && !isExhausted && (
+                      <p className="text-xs text-amber-500 font-medium mt-1">
+                        You are running low on tokens
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {user ? (
               <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <PopoverTrigger asChild>
@@ -222,7 +358,7 @@ export const Header = ({
                         className="flex w-full justify-start items-center"
                         onClick={() => navigate("/admin")}
                       >
-                        <Settings className="h-4 w-4" />
+                        <Settings className="mr-2 h-4 w-4" />
                         <span>Admin</span>
                       </Button>
                     )}
@@ -261,7 +397,6 @@ export const Header = ({
           </div>
         </div>
       </header>
-
       {isProfileOpen && (
         <ProfilePopup
           studentInfo={studentInfo}

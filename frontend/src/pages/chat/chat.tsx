@@ -12,7 +12,9 @@ import { Sidebar } from "@/components/custom/sidebar";
 import { Button } from "@/components/ui/button";
 import { Menu, PlusCircle } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import { sendChatMessage } from "@/services/api";
+import { fetchTokenUsage, sendChatMessage } from "@/services/api";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext"; // Add this import for the context
 
 interface Chat {
   id: string;
@@ -31,6 +33,13 @@ export function Chat() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isNewChat, setIsNewChat] = useState<boolean>(true);
+  const [tokenLimitReached, setTokenLimitReached] = useState<boolean>(false);
+  const { user } = useAuth(); // Add this to access the auth context
+
+  // Check token limit when component mounts
+  useEffect(() => {
+    checkTokenLimit();
+  }, []);
 
   // Create a new temp chat when the component mounts if there are no chats
   useEffect(() => {
@@ -58,6 +67,39 @@ export function Chat() {
     }
   }, [activeChat, chats, tempChat]);
 
+  // Check if the user has reached their token limit
+  const checkTokenLimit = async () => {
+    try {
+      const tokenData = await fetchTokenUsage();
+      if (tokenData && tokenData.percentage_used >= 100) {
+        setTokenLimitReached(true);
+
+        // Add system message about token limit if no messages yet
+        if (messages.length === 0) {
+          const limitMessage = {
+            content:
+              "You've reached your monthly token limit. Please contact an administrator for assistance.",
+            role: "assistant",
+            id: uuidv4(),
+            isError: true,
+          };
+
+          setMessages([limitMessage]);
+
+          // If we have a temp chat, add the message to it
+          if (tempChat) {
+            setTempChat({
+              ...tempChat,
+              messages: [limitMessage],
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check token limit:", error);
+    }
+  };
+
   // Create a new chat
   const createNewChat = () => {
     const newChatId = uuidv4();
@@ -76,57 +118,59 @@ export function Chat() {
 
   // Delete a chat
   const handleDeleteChat = (chatId: string) => {
-    // Check if we're deleting the active chat
+    if (tempChat && tempChat.id === chatId) {
+      // If deleting the temp chat, create a new one
+      setTempChat(null);
+      setActiveChat(null);
+      createNewChat();
+      return;
+    }
+
+    // Delete from chat history
+    setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+
+    // If deleting the active chat, select a new one
     if (activeChat === chatId) {
-      // If we're deleting the temp chat, create a new one
-      if (tempChat && tempChat.id === chatId) {
-        createNewChat();
-        return;
-      }
-
-      // Otherwise, we're deleting a chat from history
-      const remainingChats = chats.filter((chat) => chat.id !== chatId);
-
-      if (remainingChats.length > 0) {
-        // If there are other chats, activate the first one
-        const nextChat = remainingChats[0];
-        setChats(remainingChats);
-        setActiveChat(nextChat.id);
-        setMessages(nextChat.messages);
-        setIsNewChat(false);
-      } else {
-        // If this was the last chat, create a new temp chat
-        setChats(remainingChats);
-        createNewChat();
-      }
-    } else {
-      // If we're not deleting the active chat, just update the chats list
-      setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
+      createNewChat();
     }
   };
 
   // Select a chat
   const selectChat = (chatId: string) => {
     setActiveChat(chatId);
+  };
 
-    // Check if selected chat is the temp chat
-    if (tempChat && tempChat.id === chatId) {
-      setMessages(tempChat.messages);
-      setIsNewChat(true);
-      return;
+  // Get combined chats for UI display
+  const getDisplayChats = (): Chat[] => {
+    if (tempChat) {
+      return [tempChat, ...chats];
     }
+    return chats;
+  };
 
-    // Otherwise, find the chat in history
-    const chat = chats.find((chat) => chat.id === chatId);
-    if (chat) {
-      setMessages(chat.messages);
-      setIsNewChat(false);
+  // Function to update token usage in the UI
+  const updateTokenUsage = async () => {
+    if (!user) return;
+
+    try {
+      await fetchTokenUsage();
+      // The header component will automatically update since it has a reference to this data
+    } catch (err) {
+      console.error("Error updating token usage:", err);
     }
   };
 
   // Handle message submission
   async function handleSubmit(text?: string) {
     if (isLoading) return;
+
+    // If token limit is reached, show error and prevent submission
+    if (tokenLimitReached) {
+      toast.error(
+        "Monthly token limit reached. Please contact an administrator for assistance."
+      );
+      return;
+    }
 
     const messageText = text || question;
     if (!messageText.trim()) return;
@@ -177,12 +221,15 @@ export function Chat() {
       );
     }
 
-    setQuestion("");
-    setIsNewChat(false);
-
     try {
+      // Update token usage before sending the message
+      await updateTokenUsage();
+
       // Send message to backend API
       const response = await sendChatMessage(messageText);
+
+      // Update token usage after we get a response
+      await updateTokenUsage();
 
       if (response.response) {
         // Add assistant response to messages
@@ -197,8 +244,41 @@ export function Chat() {
               : chat
           )
         );
+
+        // Update token usage one final time after processing the response
+        await updateTokenUsage();
+      } else if (
+        response.error === "token_limit_reached" ||
+        response.tokenLimitReached
+      ) {
+        // Handle token limit reached error
+        setTokenLimitReached(true);
+        await updateTokenUsage();
+
+        // Add assistant error message about token limit
+        const errorMessage = {
+          content:
+            response.message ||
+            "You've reached your monthly token limit. Please contact an administrator for assistance.",
+          role: "assistant",
+          id: uuidv4(),
+          isError: true,
+        };
+
+        setMessages((prev) => [...prev, errorMessage]);
+        setChats((prevChats) =>
+          prevChats.map((chat) =>
+            chat.id === activeChat
+              ? { ...chat, messages: [...chat.messages, errorMessage] }
+              : chat
+          )
+        );
+
+        toast.error("Monthly token limit reached");
       } else if (response.error) {
         console.error("API error:", response.error);
+        await updateTokenUsage();
+
         // Add error message
         const errorMessage = {
           content: "Sorry, there was an error processing your request.",
@@ -216,31 +296,14 @@ export function Chat() {
         );
       }
     } catch (error) {
-      console.error("API request failed:", error);
-      // Add error message
-      const errorMessage = {
-        content: "Sorry, there was an error connecting to the service.",
-        role: "assistant",
-        id: uuidv4(),
-      };
-
-      setMessages((prev) => [...prev, errorMessage]);
-      setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === activeChat
-            ? { ...chat, messages: [...chat.messages, errorMessage] }
-            : chat
-        )
-      );
+      console.error("Error in handleSubmit:", error);
+      await updateTokenUsage();
+      toast.error("An error occurred while processing your message");
     } finally {
       setIsLoading(false);
+      setQuestion("");
     }
   }
-
-  // Get all chats for display in sidebar (only show chats with messages)
-  const getDisplayChats = () => {
-    return chats;
-  };
 
   return (
     <div className="flex flex-col min-w-0 h-dvh bg-background">
@@ -279,7 +342,7 @@ export function Chat() {
         className="flex flex-col min-w-0 gap-6 flex-1 overflow-y-scroll pt-4"
         ref={messagesContainerRef}
       >
-        {messages.length == 0 && <Overview />}
+        {messages.length == 0 && !tokenLimitReached && <Overview />}
         {messages.map((message, index) => (
           <PreviewMessage key={index} message={message} />
         ))}
@@ -289,6 +352,7 @@ export function Chat() {
           className="shrink-0 min-w-[24px] min-h-[24px]"
         />
       </div>
+
       <div className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
         <ChatInput
           question={question}
@@ -296,6 +360,7 @@ export function Chat() {
           onSubmit={handleSubmit}
           isLoading={isLoading}
           isNewChat={isNewChat}
+          disabled={tokenLimitReached}
         />
       </div>
     </div>
