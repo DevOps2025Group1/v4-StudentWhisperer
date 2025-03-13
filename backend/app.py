@@ -300,7 +300,6 @@ def get_student_courses():
             "id": student_info.program.get("program_id", 0),
             "name": student_info.program.get("program_name", ""),
             "european_credits": student_info.program.get("program_ec", 180),
-            "european_credits": student_info.program.get("program_ec", 180),
         }
 
         # Format the courses data from student_info
@@ -309,13 +308,10 @@ def get_student_courses():
             formatted_grade = {
                 "id": i + 1,
                 "course_id": course["id"],
-                "course_id": course["id"],
                 "grade": course["grade"],
                 "feedback": course.get("feedback", ""),
                 "created_at": str(course["created_at"]),
-                "created_at": str(course["created_at"]),
                 "course": {
-                    "id": course["id"],
                     "id": course["id"],
                     "name": course["course_name"],
                     "european_credits": course["ec"],

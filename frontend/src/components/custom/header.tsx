@@ -219,11 +219,11 @@ export const Header = ({
                     {user.student_id === 1 && (
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="size-9 rounded-full"
+                        className="flex w-full justify-start items-center"
                         onClick={() => navigate("/admin")}
                       >
                         <Settings className="h-4 w-4" />
+                        <span>Admin</span>
                       </Button>
                     )}
                     <Button
