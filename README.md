@@ -56,7 +56,7 @@ StudentWhisperer is an integrated platform designed to enhance the educational e
 
 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone git@github.com:DevOps2025Group1/v4-StudentWhisperer.git
 cd v4-StudentWhisperer
 ```
 
