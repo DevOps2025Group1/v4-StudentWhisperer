@@ -13,7 +13,6 @@ declare global {
 // Prioritize runtime env over build-time env
 const API_URL = window.ENV?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
-
 // User registration interface
 export interface RegisterUserData {
   name: string;
@@ -96,17 +95,18 @@ export async function registerUser(userData: RegisterUserData) {
       body: JSON.stringify(userData),
     });
 
+    const responseData = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
       return {
         success: false,
-        error: errorData.message || "Registration failed",
+        error: responseData.message || "Registration failed",
       };
     }
 
     return {
       success: true,
-      data: await response.json(),
+      data: responseData,
     };
   } catch (error) {
     console.error("Registration failed:", error);
@@ -276,16 +276,19 @@ export async function getCurrentUser() {
   }
 }
 
-/* 
+/*
  * Fetch student data from the backend
  */
 export async function fetchStudentCourses(email: string) {
   try {
-    const response = await fetch(`${API_URL}/api/student/courses?email=${encodeURIComponent(email)}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: createAuthHeaders(),
-    });
+    const response = await fetch(
+      `${API_URL}/api/student/courses?email=${encodeURIComponent(email)}`,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: createAuthHeaders(),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -294,7 +297,7 @@ export async function fetchStudentCourses(email: string) {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching student courses:', error);
+    console.error("Error fetching student courses:", error);
     // Return empty data structure to prevent undefined errors
     return { program: null, grades: [] };
   }
@@ -305,19 +308,16 @@ export async function fetchStudentCourses(email: string) {
  */
 export async function fetchMetrics() {
   try {
-    const response = await fetch(
-      `${API_URL}/api/metrics`,
-      {
-        credentials: 'include',
-        headers: createAuthHeaders()
-      }
-    );
+    const response = await fetch(`${API_URL}/api/metrics`, {
+      credentials: "include",
+      headers: createAuthHeaders(),
+    });
     if (!response.ok) {
-      throw new Error('Failed to fetch metrics');
+      throw new Error("Failed to fetch metrics");
     }
     return await response.json();
   } catch (error) {
-    console.error('Error fetching metrics:', error);
+    console.error("Error fetching metrics:", error);
     throw error;
   }
 }
@@ -328,36 +328,40 @@ export async function fetchMetrics() {
  * @param newEmail New email to set
  * @param password Current password for verification
  */
-export async function updateUserEmail(currentEmail: string, newEmail: string, password: string) {
+export async function updateUserEmail(
+  currentEmail: string,
+  newEmail: string,
+  password: string
+) {
   try {
     const response = await fetch(`${API_URL}/api/student/update-email`, {
-      method: 'PUT',
+      method: "PUT",
       headers: createAuthHeaders(),
       body: JSON.stringify({
         currentEmail,
         newEmail,
-        password
+        password,
       }),
     });
-    
+
     const data = await response.json();
-    
+
     if (!response.ok) {
       return {
         success: false,
-        error: data.message || `Request failed with status: ${response.status}`
+        error: data.message || `Request failed with status: ${response.status}`,
       };
     }
-    
+
     return {
       success: true,
-      message: data.message || "Email updated successfully"
+      message: data.message || "Email updated successfully",
     };
   } catch (error) {
-    console.error('Error updating email:', error);
+    console.error("Error updating email:", error);
     return {
       success: false,
-      error: "Failed to connect to the server"
+      error: "Failed to connect to the server",
     };
   }
 }
@@ -368,36 +372,40 @@ export async function updateUserEmail(currentEmail: string, newEmail: string, pa
  * @param currentPassword Current password
  * @param newPassword New password to set
  */
-export async function updateUserPassword(email: string, currentPassword: string, newPassword: string) {
+export async function updateUserPassword(
+  email: string,
+  currentPassword: string,
+  newPassword: string
+) {
   try {
     const response = await fetch(`${API_URL}/api/student/update-password`, {
-      method: 'PUT',
+      method: "PUT",
       headers: createAuthHeaders(),
       body: JSON.stringify({
         email,
         currentPassword,
-        newPassword
+        newPassword,
       }),
     });
-    
+
     const data = await response.json();
-    
+
     if (!response.ok) {
       return {
         success: false,
-        error: data.message || `Request failed with status: ${response.status}`
+        error: data.message || `Request failed with status: ${response.status}`,
       };
     }
-    
+
     return {
       success: true,
-      message: data.message || "Password updated successfully"
+      message: data.message || "Password updated successfully",
     };
   } catch (error) {
-    console.error('Error updating password:', error);
+    console.error("Error updating password:", error);
     return {
       success: false,
-      error: "Failed to connect to the server"
+      error: "Failed to connect to the server",
     };
   }
 }

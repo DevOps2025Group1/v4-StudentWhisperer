@@ -244,10 +244,10 @@ export function Chat() {
 
   return (
     <div className="flex flex-col min-w-0 h-dvh bg-background">
-      <Header>
+      <Header showTitle={false}>
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="size-9 rounded-full"
@@ -265,8 +265,8 @@ export function Chat() {
         </div>
       </Header>
 
-      <Sidebar 
-        isOpen={isSidebarOpen} 
+      <Sidebar
+        isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onDeleteChat={handleDeleteChat}
         chats={getDisplayChats()}
@@ -274,7 +274,7 @@ export function Chat() {
         onSelectChat={selectChat}
         onNewChat={createNewChat}
       />
-      
+
       <div
         className="flex flex-col min-w-0 gap-6 flex-1 overflow-y-scroll pt-4"
         ref={messagesContainerRef}

@@ -194,7 +194,7 @@ export function ProfilePopup({ studentInfo, isLoading, onClose, onInfoUpdate }: 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] flex flex-col">
+      <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Fixed header that stays in place */}
         <div className="sticky top-0 bg-background z-10 px-6 py-4 border-b">
           <div className="flex justify-between items-center">
@@ -229,7 +229,7 @@ export function ProfilePopup({ studentInfo, isLoading, onClose, onInfoUpdate }: 
         </div>
         
         {/* Scrollable content area with its own padding */}
-        <div className="overflow-y-auto p-6 flex-1">
+        <div className="overflow-y-auto p-6 flex-1 rounded-b-lg">
           {activeTab === 'profile' && (
             <div className="space-y-4">
               <div className="flex items-center justify-center mb-4">
