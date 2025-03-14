@@ -30,15 +30,26 @@ class OpenAIChatbot:
         """Generate a response including session chat history."""
         # Retrieve student information
         student = self.database_client.get_student_info(student_id)
-        student_context = (
-            f"Student Information:\n"
-            f"- Name: {student.name}\n"
-            f"- Email: {student.email}\n"
-            f"- Courses and Grades:\n"
-        )
 
-        for course in student.courses:
-            student_context += f"  - {course['course_name']}: {course['grade']}\n"
+        # Handle case where student information is not found
+        if student is None:
+            student_context = "Student Information:\n- New User (No course information available yet)\n"
+        else:
+            # Build student context with available information
+            student_context = (
+                f"Student Information:\n"
+                f"- Name: {student.name}\n"
+                f"- Email: {student.email}\n"
+                f"- Courses and Grades:\n"
+            )
+
+            if student.courses:
+                for course in student.courses:
+                    student_context += (
+                        f"  - {course['course_name']}: {course['grade']}\n"
+                    )
+            else:
+                student_context += "  - No course information available yet\n"
 
         # Search for relevant context
         search_results = self.search_client.search_documents(prompt)

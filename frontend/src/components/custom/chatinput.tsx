@@ -12,6 +12,7 @@ interface ChatInputProps {
   onSubmit: (text?: string) => void;
   isLoading: boolean;
   isNewChat?: boolean;
+  disabled?: boolean;
 }
 
 const suggestedActions = [
@@ -54,6 +55,7 @@ export const ChatInput = ({
   onSubmit,
   isLoading,
   isNewChat = false,
+  disabled = false,
 }: ChatInputProps) => {
   const [showSuggestions, setShowSuggestions] = useState(isNewChat);
 
@@ -64,7 +66,7 @@ export const ChatInput = ({
 
   return (
     <div className="relative w-full flex flex-col gap-4">
-      {showSuggestions && isNewChat && (
+      {showSuggestions && isNewChat && !disabled && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full">
           {suggestedActions.map((suggestedAction, index) => (
             <motion.div
@@ -92,6 +94,17 @@ export const ChatInput = ({
           ))}
         </div>
       )}
+
+      {/* Display a message when token limit is reached */}
+      {disabled && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-500 px-4 py-3 rounded-lg mb-2">
+          <p className="text-sm">
+            You've reached your monthly token limit. Please contact an
+            administrator for assistance.
+          </p>
+        </div>
+      )}
+
       <input
         type="file"
         className="fixed -top-4 -left-4 size-0.5 opacity-0 pointer-events-none"
@@ -99,9 +112,10 @@ export const ChatInput = ({
         tabIndex={-1}
       />
       <Textarea
-        placeholder="Send a message..."
+        placeholder={disabled ? "Token limit reached" : "Send a message..."}
         className={cx(
-          "min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-xl text-base bg-muted"
+          "min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-xl text-base bg-muted",
+          disabled && "opacity-70 cursor-not-allowed"
         )}
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
@@ -110,6 +124,10 @@ export const ChatInput = ({
             event.preventDefault();
             if (isLoading) {
               toast.error("Please wait for the model to finish its response!");
+            } else if (disabled) {
+              toast.error(
+                "Monthly token limit reached. Please contact an administrator for assistance."
+              );
             } else {
               setShowSuggestions(false);
               onSubmit();
@@ -118,6 +136,7 @@ export const ChatInput = ({
         }}
         rows={3}
         autoFocus
+        disabled={disabled}
       />
       <Button
         className="rounded-full p-1.5 h-fit absolute bottom-2 right-2 m-0.5 border dark:border-zinc-600"
@@ -125,7 +144,7 @@ export const ChatInput = ({
           setShowSuggestions(false);
           onSubmit(question);
         }}
-        disabled={question.length === 0}
+        disabled={question.length === 0 || isLoading || disabled}
       >
         <ArrowUpIcon size={14} />
       </Button>

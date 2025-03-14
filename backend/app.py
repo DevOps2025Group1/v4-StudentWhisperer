@@ -25,9 +25,11 @@ logging.basicConfig(
 )
 
 load_dotenv()
+
 db = database_client.DatabaseClient()
 
 app = Flask(__name__)
+
 # Configure Session
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = True
@@ -187,28 +189,34 @@ def login():
     return response
 
 
+@app.route("/api/auth/logout", methods=["POST"])
+def logout():
+    """Logout endpoint to clear session cookies"""
+    response = make_response(
+        jsonify({"status": "success", "message": "Logged out successfully"})
+    )
+
+    # Clear all session cookies
+    response.delete_cookie("student_id")
+    response.delete_cookie("flask_chat_session")
+
+    return response
+
+
 # Azure AD authentication endpoint
 @app.route("/api/auth/azure-token", methods=["POST"])
 def azure_login():
     """Exchange an Azure AD token for an application token"""
-
     result = exchange_azure_token(
         None
     )  # Token is extracted from the header in the function
 
-    # If result is a tuple, it's an error response
-    if isinstance(result, tuple):
+    # If it's a tuple or not a response object, it's an error response
+    if isinstance(result, tuple) or not hasattr(result, "headers"):
         return result
 
-    # Success response with token and user info
-    return jsonify(
-        {
-            "status": "success",
-            "message": "Azure AD authentication successful",
-            "token": result["token"],
-            "user": result["user"],
-        }
-    )
+    # The successful response now includes the cookie, so we can return it directly
+    return result
 
 
 @app.route("/api/chat", methods=["POST"])
@@ -218,31 +226,85 @@ def chat():
     prompt = data.get("message", "")
     chatbot = OpenAIChatbot()
 
+    # Get student_id from cookie and ensure it's an integer
     student_id = request.cookies.get("student_id")
 
+    # Verify student_id is valid
+    if not student_id:
+        logging.error("Chat error: No student_id in cookies")
+        return jsonify({"error": "Authentication required. Please log in again."}), 401
+
+    try:
+        # Convert to integer to make sure it's valid
+        student_id = int(student_id)
+    except (TypeError, ValueError):
+        logging.error(f"Chat error: Invalid student_id: {student_id}")
+        return jsonify({"error": "Invalid user session. Please log in again."}), 401
+
+    # Check if user has reached their token limit
+    # First, we need to estimate tokens for this request
+    input_tokens = len(TOKEN_ENCODER.encode(prompt))
+    estimated_tokens = input_tokens * 4  # Rough estimate for total (input + output)
+
+    # Check if user can use these tokens
+    if not db.can_user_use_tokens(student_id, estimated_tokens):
+        return (
+            jsonify(
+                {
+                    "error": "token_limit_reached",
+                    "message": "You have reached your monthly token limit",
+                }
+            ),
+            403,
+        )
+
     chat_history = session.get("chat_history", [])
-    response_content = chatbot.generate_response(prompt, student_id, chat_history)
 
-    chat_history.append({"role": "user", "content": prompt})
-    chat_history.append({"role": "assistant", "content": response_content})
+    try:
+        response_content = chatbot.generate_response(prompt, student_id, chat_history)
 
-    session["chat_history"] = chat_history[-10:]
-    session.modified = True
+        chat_history.append({"role": "user", "content": prompt})
+        chat_history.append({"role": "assistant", "content": response_content})
 
-    # Create response and explicitly set session cookie
-    response = make_response(
-        jsonify({"response": {"role": "assistant", "content": response_content}})
-    )
-    response.set_cookie(
-        "flask_chat_session", session.sid, httponly=True, samesite="Lax", secure=False
-    )
+        session["chat_history"] = chat_history[-10:]
+        session.modified = True
 
-    input_tokens = TOKEN_ENCODER.encode(prompt)
-    output_tokens = TOKEN_ENCODER.encode(response_content)
-    total_tokens = len(input_tokens) + len(output_tokens)
-    db.add_token_usage(student_id, total_tokens)
+        # Create response and explicitly set session cookie
+        response = make_response(
+            jsonify({"response": {"role": "assistant", "content": response_content}})
+        )
+        response.set_cookie(
+            "flask_chat_session",
+            session.sid,
+            httponly=True,
+            samesite="Lax",
+            secure=False,
+        )
 
-    return response
+        # Calculate and record token usage
+        output_tokens = len(TOKEN_ENCODER.encode(response_content))
+        total_tokens = input_tokens + output_tokens
+        db.add_token_usage(student_id, total_tokens)
+
+        print(
+            f"Student {student_id} used {total_tokens} tokens.",
+            flush=True,
+        )
+
+        return response
+
+    except Exception as e:
+        # Even if the request fails, we should still track the input tokens
+        # Only track tokens if student_id is valid
+        if isinstance(student_id, int):
+            db.add_token_usage(student_id, input_tokens)
+            print(
+                f"Student {student_id} used {input_tokens} tokens (failed request).",
+                flush=True,
+            )
+
+        logging.error(f"Chat error: {str(e)}")
+        return jsonify({"error": f"Error processing request: {str(e)}"}), 500
 
 
 @app.route("/api/protected", methods=["GET"])
@@ -289,7 +351,16 @@ def get_student_courses():
     try:
         student_id = request.cookies.get("student_id")
         if not student_id:
-            return jsonify({"error": "Email parameter is required"}), 400
+            return (
+                jsonify({"error": "Authentication required. Please log in again."}),
+                401,
+            )
+
+        try:
+            # Convert to integer to make sure it's valid
+            student_id = int(student_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid session. Please log in again."}), 401
 
         student_info = db.get_student_info(student_id)
         if not student_info:
@@ -327,7 +398,6 @@ def get_student_courses():
                 "grades": formatted_grades,
             }
         )
-
     except Exception as e:
         logging.error(f"Error fetching student courses: {e}")
         return (
@@ -336,6 +406,159 @@ def get_student_courses():
             ),
             500,
         )
+
+
+@app.route("/api/tokens/usage", methods=["GET"])
+@token_required
+def get_token_usage():
+    """Get token usage for the current user"""
+    try:
+        student_id = request.cookies.get("student_id")
+        if not student_id:
+            return jsonify({"error": "User not authenticated"}), 401
+
+        try:
+            student_id = int(student_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid student ID"}), 400
+
+        # Get current month's usage and cache it
+        current_usage = db.get_user_monthly_usage(student_id)
+        user_limit = db.get_user_token_limit(student_id)
+
+        # Calculate percentage used
+        percentage_used = 0
+        if user_limit > 0:
+            percentage_used = min(100, round((current_usage / user_limit) * 100, 1))
+
+        response_data = {
+            "usage": current_usage,
+            "limit": user_limit,
+            "percentage_used": percentage_used,
+        }
+
+        # Set cache control headers to help prevent aggressive polling
+        response = jsonify(response_data)
+        response.headers["Cache-Control"] = "private, max-age=5"  # Cache for 5 seconds
+        return response
+
+    except Exception as e:
+        app.logger.error(f"Error getting token usage: {str(e)}")
+        return (
+            jsonify(
+                {"error": "Server error", "message": "Failed to fetch token usage"}
+            ),
+            500,
+        )
+
+
+@app.route("/api/admin/tokens/usage", methods=["GET"])
+@token_required
+def get_admin_token_usage():
+    """Get token usage for all users (admin only)"""
+    try:
+        student_id = request.cookies.get("student_id")
+        if str(student_id) != str(ADMIN_USER_ID):
+            return jsonify({"error": "Not authorized"}), 403
+
+        # Get year and month from query params, if provided
+        year = request.args.get("year", type=int)
+        month = request.args.get("month", type=int)
+
+        # Get usage data for all users
+        usage_data = db.get_monthly_token_usage(year, month)
+
+        # Get global limit and active users count
+        global_limit = db.get_global_token_limit()
+        active_users = db.get_active_users_count()
+
+        return jsonify(
+            {
+                "global_limit": global_limit,
+                "active_users": active_users,
+                "usage_data": usage_data,
+            }
+        )
+
+    except Exception as e:
+        logging.error(f"Error getting admin token usage: {e}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+
+@app.route("/api/admin/tokens/limit", methods=["GET"])
+@token_required
+def get_token_limit():
+    """Get the current global token limit (admin only)"""
+    try:
+        student_id = request.cookies.get("student_id")
+        if str(student_id) != str(ADMIN_USER_ID):
+            return jsonify({"error": "Not authorized"}), 403
+
+        # Get global limit
+        global_limit = db.get_global_token_limit()
+
+        # Get active users count
+        active_users = db.get_active_users_count()
+
+        # Calculate per user limit
+        per_user_limit = global_limit
+        if active_users > 0:
+            per_user_limit = global_limit // active_users
+
+        return jsonify(
+            {
+                "global_limit": global_limit,
+                "active_users": active_users,
+                "per_user_limit": per_user_limit,
+                "status": "success",
+            }
+        )
+
+    except Exception as e:
+        logging.error(f"Error getting token limit: {e}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+
+@app.route("/api/admin/tokens/limit", methods=["POST"])
+@token_required
+def set_token_limit():
+    """Set the global token limit (admin only)"""
+    try:
+        student_id = request.cookies.get("student_id")
+        if str(student_id) != str(ADMIN_USER_ID):
+            return jsonify({"error": "Not authorized"}), 403
+
+        data = request.json
+        if not data or not data.get("limit"):
+            return jsonify({"error": "Missing required field: limit"}), 400
+
+        limit = int(data.get("limit"))
+        if limit <= 0:
+            return jsonify({"error": "Limit must be a positive number"}), 400
+
+        # Update the global limit
+        db.set_global_token_limit(limit)
+
+        # Get active users count for response
+        active_users = db.get_active_users_count()
+
+        # Calculate per user limit
+        per_user_limit = limit
+        if active_users > 0:
+            per_user_limit = limit // active_users
+
+        return jsonify(
+            {
+                "global_limit": limit,
+                "active_users": active_users,
+                "per_user_limit": per_user_limit,
+                "status": "success",
+            }
+        )
+
+    except Exception as e:
+        logging.error(f"Error setting token limit: {e}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
 @app.route("/api/metrics", methods=["GET"])

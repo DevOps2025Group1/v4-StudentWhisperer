@@ -54,12 +54,14 @@ export const exchangeAzureToken = async () => {
     const azureToken = await getAzureToken();
 
     // Exchange it for an application token
+    // Adding credentials: 'include' to ensure cookies are properly handled
     const response = await fetch(`${API_URL}/api/auth/azure-token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${azureToken}`,
       },
+      credentials: "include", // This is crucial for cookie handling
     });
 
     if (!response.ok) {
@@ -94,6 +96,7 @@ export const callProtectedApiWithAzure = async (url, options = {}) => {
 
     const response = await fetch(url, {
       ...options,
+      credentials: "include", // Include cookies in the request
       headers: {
         ...options.headers,
         Authorization: `Bearer ${token}`,
@@ -151,6 +154,7 @@ export const callProtectedApi = async (url, options = {}, msalInstance) => {
 
     const response = await fetch(url, {
       ...options,
+      credentials: "include", // Include cookies in the request
       headers: {
         ...options.headers,
         Authorization: `Bearer ${token}`,

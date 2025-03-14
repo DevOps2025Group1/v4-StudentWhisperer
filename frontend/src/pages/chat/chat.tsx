@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Menu, PlusCircle } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { sendChatMessage } from "@/services/api";
+import { toast } from "sonner";
+import { useTokenUsage } from "@/context/TokenUsageContext";
 
 interface Chat {
   id: string;
@@ -23,14 +25,43 @@ interface Chat {
 export function Chat() {
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
-  const [chats, setChats] = useState<Chat[]>([]); // Chats with messages (history)
-  const [tempChat, setTempChat] = useState<Chat | null>(null); // Current new chat (if any)
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [tempChat, setTempChat] = useState<Chat | null>(null);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<message[]>([]);
   const [question, setQuestion] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isNewChat, setIsNewChat] = useState<boolean>(true);
+  const [tokenLimitReached, setTokenLimitReached] = useState<boolean>(false);
+  const { tokenUsage, refreshTokenUsage } = useTokenUsage();
+
+  // Check token limit when component mounts or tokenUsage changes
+  useEffect(() => {
+    if (tokenUsage && tokenUsage.percentage_used >= 100) {
+      setTokenLimitReached(true);
+
+      // Add system message about token limit if no messages yet
+      if (messages.length === 0) {
+        const limitMessage = {
+          content:
+            "You've reached your monthly token limit. Please contact an administrator for assistance.",
+          role: "assistant",
+          id: uuidv4(),
+          isError: true,
+        };
+        setMessages([limitMessage]);
+
+        // If we have a temp chat, add the message to it
+        if (tempChat) {
+          setTempChat({
+            ...tempChat,
+            messages: [limitMessage],
+          });
+        }
+      }
+    }
+  }, [tokenUsage, messages.length, tempChat]);
 
   // Create a new temp chat when the component mounts if there are no chats
   useEffect(() => {
@@ -76,57 +107,47 @@ export function Chat() {
 
   // Delete a chat
   const handleDeleteChat = (chatId: string) => {
-    // Check if we're deleting the active chat
+    if (tempChat && tempChat.id === chatId) {
+      // If deleting the temp chat, create a new one
+      setTempChat(null);
+      setActiveChat(null);
+      createNewChat();
+      return;
+    }
+
+    // Delete from chat history
+    setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+
+    // If deleting the active chat, select a new one
     if (activeChat === chatId) {
-      // If we're deleting the temp chat, create a new one
-      if (tempChat && tempChat.id === chatId) {
-        createNewChat();
-        return;
-      }
-
-      // Otherwise, we're deleting a chat from history
-      const remainingChats = chats.filter((chat) => chat.id !== chatId);
-
-      if (remainingChats.length > 0) {
-        // If there are other chats, activate the first one
-        const nextChat = remainingChats[0];
-        setChats(remainingChats);
-        setActiveChat(nextChat.id);
-        setMessages(nextChat.messages);
-        setIsNewChat(false);
-      } else {
-        // If this was the last chat, create a new temp chat
-        setChats(remainingChats);
-        createNewChat();
-      }
-    } else {
-      // If we're not deleting the active chat, just update the chats list
-      setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
+      createNewChat();
     }
   };
 
   // Select a chat
   const selectChat = (chatId: string) => {
     setActiveChat(chatId);
+  };
 
-    // Check if selected chat is the temp chat
-    if (tempChat && tempChat.id === chatId) {
-      setMessages(tempChat.messages);
-      setIsNewChat(true);
-      return;
+  // Get combined chats for UI display
+  const getDisplayChats = (): Chat[] => {
+    if (tempChat) {
+      return [tempChat, ...chats];
     }
-
-    // Otherwise, find the chat in history
-    const chat = chats.find((chat) => chat.id === chatId);
-    if (chat) {
-      setMessages(chat.messages);
-      setIsNewChat(false);
-    }
+    return chats;
   };
 
   // Handle message submission
   async function handleSubmit(text?: string) {
     if (isLoading) return;
+
+    // If token limit is reached, show error and prevent submission
+    if (tokenLimitReached) {
+      toast.error(
+        "Monthly token limit reached. Please contact an administrator for assistance."
+      );
+      return;
+    }
 
     const messageText = text || question;
     if (!messageText.trim()) return;
@@ -177,12 +198,15 @@ export function Chat() {
       );
     }
 
-    setQuestion("");
-    setIsNewChat(false);
-
     try {
+      // Refresh token usage before sending the message
+      await refreshTokenUsage();
+
       // Send message to backend API
       const response = await sendChatMessage(messageText);
+
+      // Refresh token usage after we get a response - this updates the progress bar
+      await refreshTokenUsage();
 
       if (response.response) {
         // Add assistant response to messages
@@ -197,15 +221,46 @@ export function Chat() {
               : chat
           )
         );
+      } else if (
+        response.error === "token_limit_reached" ||
+        response.tokenLimitReached
+      ) {
+        // Handle token limit reached error
+        setTokenLimitReached(true);
+
+        // Refresh token usage to update UI
+        await refreshTokenUsage();
+
+        // Add assistant error message about token limit
+        const errorMessage = {
+          content:
+            response.message ||
+            "You've reached your monthly token limit. Please contact an administrator for assistance.",
+          role: "assistant",
+          id: uuidv4(),
+          isError: true,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        setChats((prevChats) =>
+          prevChats.map((chat) =>
+            chat.id === activeChat
+              ? { ...chat, messages: [...chat.messages, errorMessage] }
+              : chat
+          )
+        );
+        toast.error("Monthly token limit reached");
       } else if (response.error) {
         console.error("API error:", response.error);
+
+        // Refresh token usage
+        await refreshTokenUsage();
+
         // Add error message
         const errorMessage = {
           content: "Sorry, there was an error processing your request.",
           role: "assistant",
           id: uuidv4(),
         };
-
         setMessages((prev) => [...prev, errorMessage]);
         setChats((prevChats) =>
           prevChats.map((chat) =>
@@ -216,31 +271,16 @@ export function Chat() {
         );
       }
     } catch (error) {
-      console.error("API request failed:", error);
-      // Add error message
-      const errorMessage = {
-        content: "Sorry, there was an error connecting to the service.",
-        role: "assistant",
-        id: uuidv4(),
-      };
+      console.error("Error in handleSubmit:", error);
 
-      setMessages((prev) => [...prev, errorMessage]);
-      setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === activeChat
-            ? { ...chat, messages: [...chat.messages, errorMessage] }
-            : chat
-        )
-      );
+      // Make sure to refresh token usage even if there was an error
+      await refreshTokenUsage();
+      toast.error("An error occurred while processing your message");
     } finally {
       setIsLoading(false);
+      setQuestion("");
     }
   }
-
-  // Get all chats for display in sidebar (only show chats with messages)
-  const getDisplayChats = () => {
-    return chats;
-  };
 
   return (
     <div className="flex flex-col min-w-0 h-dvh bg-background">
@@ -264,7 +304,6 @@ export function Chat() {
           </Button>
         </div>
       </Header>
-
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -274,12 +313,11 @@ export function Chat() {
         onSelectChat={selectChat}
         onNewChat={createNewChat}
       />
-
       <div
         className="flex flex-col min-w-0 gap-6 flex-1 overflow-y-scroll pt-4"
         ref={messagesContainerRef}
       >
-        {messages.length == 0 && <Overview />}
+        {messages.length == 0 && !tokenLimitReached && <Overview />}
         {messages.map((message, index) => (
           <PreviewMessage key={index} message={message} />
         ))}
@@ -296,6 +334,7 @@ export function Chat() {
           onSubmit={handleSubmit}
           isLoading={isLoading}
           isNewChat={isNewChat}
+          disabled={tokenLimitReached}
         />
       </div>
     </div>

@@ -55,6 +55,16 @@ export function Login() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Function to determine redirect path based on user role
+  const getRedirectPath = (user: any) => {
+    // Check if user is admin (student_id === 1)
+    if (user && user.student_id === 1) {
+      return "/admin";
+    }
+    // For regular users, use the original redirect path
+    return from;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -69,8 +79,9 @@ export function Login() {
         // Store the authentication token and user info
         const { token, user } = result.data;
         login(token, user);
-        // Redirect to the intended page or chat
-        navigate(from);
+
+        // Redirect based on user role
+        navigate(getRedirectPath(user));
       } else {
         // Handle login error
         setErrors({
@@ -101,8 +112,9 @@ export function Login() {
         // Store the authentication token and user info
         const { token, user } = result.data;
         login(token, user);
-        // Navigate to the chat page
-        navigate(from);
+
+        // Redirect based on user role
+        navigate(getRedirectPath(user));
       } else {
         setErrors({
           form: "Demo login failed. Please check if the backend is running.",
