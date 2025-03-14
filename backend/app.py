@@ -234,7 +234,20 @@ def chat():
     prompt = data.get("message", "")
     chatbot = OpenAIChatbot()
 
+    # Get student_id from cookie and ensure it's an integer
     student_id = request.cookies.get("student_id")
+
+    # Verify student_id is valid
+    if not student_id:
+        logging.error("Chat error: No student_id in cookies")
+        return jsonify({"error": "Authentication required. Please log in again."}), 401
+
+    try:
+        # Convert to integer to make sure it's valid
+        student_id = int(student_id)
+    except (TypeError, ValueError):
+        logging.error(f"Chat error: Invalid student_id: {student_id}")
+        return jsonify({"error": "Invalid user session. Please log in again."}), 401
 
     # Check if user has reached their token limit
     # First, we need to estimate tokens for this request
@@ -290,11 +303,13 @@ def chat():
 
     except Exception as e:
         # Even if the request fails, we should still track the input tokens
-        db.add_token_usage(student_id, input_tokens)
-        print(
-            f"Student {student_id} used {input_tokens} tokens (failed request).",
-            flush=True,
-        )
+        # Only track tokens if student_id is valid
+        if isinstance(student_id, int):
+            db.add_token_usage(student_id, input_tokens)
+            print(
+                f"Student {student_id} used {input_tokens} tokens (failed request).",
+                flush=True,
+            )
 
         logging.error(f"Chat error: {str(e)}")
         return jsonify({"error": f"Error processing request: {str(e)}"}), 500

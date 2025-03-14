@@ -6,12 +6,7 @@ import { useMsal } from "@azure/msal-react";
 import { ChevronDown, LogOut, Moon, Sun, User, Settings } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { ProfilePopup, StudentInfo } from "./profile-popup";
-import {
-  fetchStudentCourses,
-  fetchTokenUsage,
-  TokenUsageData,
-  logoutUser,
-} from "@/services/api";
+import { fetchStudentCourses, logoutUser } from "@/services/api";
 import {
   Popover,
   PopoverContent,
@@ -25,6 +20,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { useTheme } from "@/context/ThemeContext";
+import { useTokenUsage } from "@/context/TokenUsageContext";
 
 interface HeaderProps {
   children?: React.ReactNode;
@@ -45,8 +41,7 @@ export const Header = ({
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-  const [tokenUsage, setTokenUsage] = useState<TokenUsageData | null>(null);
-  const [isLoadingTokens, setIsLoadingTokens] = useState<boolean>(false);
+  const { tokenUsage, isLoading: isLoadingTokens } = useTokenUsage();
   const { isDarkMode, toggleTheme } = useTheme();
 
   // Check if current path is chat page
@@ -65,42 +60,8 @@ export const Header = ({
     }
   }, [user]);
 
-  // Load token usage data if user is authenticated
-  useEffect(() => {
-    if (!user) {
-      // Reset token usage state when user is not authenticated
-      setTokenUsage(null);
-      setIsLoadingTokens(false);
-      return;
-    }
-
-    const loadAndSetTokenUsage = async () => {
-      setIsLoadingTokens(true);
-      try {
-        const data = await fetchTokenUsage();
-        if (data) {
-          setTokenUsage(data);
-        }
-      } catch (err) {
-        console.error("Error fetching token usage:", err);
-        // Reset token usage on error
-        setTokenUsage(null);
-      } finally {
-        setIsLoadingTokens(false);
-      }
-    };
-
-    // Initial load
-    loadAndSetTokenUsage();
-
-    // Refresh token usage every 20 seconds for more dynamic updates
-    const interval = setInterval(loadAndSetTokenUsage, 20000);
-    return () => clearInterval(interval);
-  }, [user]); // Only depend on user changes
-
   const handleLogout = async () => {
     const isAzureADSession = localStorage.getItem("auth_source") === "azure_ad";
-
     setIsDropdownOpen(false); // Close dropdown before logging out
 
     // Set logging out state to prevent auth attempts
@@ -188,7 +149,6 @@ export const Header = ({
         email: newEmail,
       });
     }
-
     // Refetch student data with the new email to ensure we have the latest data
     loadStudentData(newEmail);
   };
@@ -235,14 +195,12 @@ export const Header = ({
     } catch (error) {
       console.error("Error parsing user data:", error);
     }
-
     return "User";
   };
 
   // Format the token usage for display
   const formatTokenUsage = () => {
     if (!tokenUsage) return "Loading...";
-
     const { usage, limit, percentage_used } = tokenUsage;
     return `${usage.toLocaleString()} / ${limit.toLocaleString()} tokens (${percentage_used.toFixed(
       1
@@ -252,7 +210,6 @@ export const Header = ({
   // Determine token status
   const getTokenStatus = () => {
     if (!tokenUsage) return { isLow: false, isExhausted: false };
-
     const { percentage_used } = tokenUsage;
     return {
       isLow: percentage_used >= 80 && percentage_used < 100,
@@ -295,7 +252,6 @@ export const Header = ({
               <span className="text-lg font-semibold">Student Whisperer</span>
             )}
           </div>
-
           <div className="flex items-center gap-3">
             {/* Token usage progress bar (only for authenticated users) */}
             {user && (

@@ -117,11 +117,11 @@ export async function registerUser(userData: RegisterUserData) {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include", // Add this to ensure cookies are saved
       body: JSON.stringify(userData),
     });
 
     const responseData = await response.json();
-
     if (!response.ok) {
       return {
         success: false,

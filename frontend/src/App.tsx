@@ -11,6 +11,7 @@ import {
 } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { TokenUsageProvider } from "./context/TokenUsageContext";
 import { ProtectedRoute } from "./components/custom/protected-route";
 import { MsalAuthProvider } from "./components/custom/msal-auth-provider";
 
@@ -20,23 +21,25 @@ function App() {
       <AuthProvider>
         <MsalAuthProvider>
           <ThemeProvider>
-            <div className="w-full h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-              <Routes>
-                <Route path="/" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/login" element={<Login />} />
-                <Route
-                  path="/chat"
-                  element={
-                    <ProtectedRoute>
-                      <Chat />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </div>
+            <TokenUsageProvider>
+              <div className="w-full h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+                <Routes>
+                  <Route path="/" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route
+                    path="/chat"
+                    element={
+                      <ProtectedRoute>
+                        <Chat />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
+            </TokenUsageProvider>
           </ThemeProvider>
         </MsalAuthProvider>
       </AuthProvider>
