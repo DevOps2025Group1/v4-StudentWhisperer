@@ -405,17 +405,33 @@ export async function fetchTokenUsage(): Promise<TokenUsageData> {
       method: "GET",
       credentials: "include",
       headers: createAuthHeaders(),
+      cache: "no-store", // Ensure we don't use browser cache, rely on server Cache-Control
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication required");
+      }
+      if (response.status === 429) {
+        throw new Error("Too many requests");
+      }
       throw new Error(`API error: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    if (!data || typeof data.usage !== "number") {
+      throw new Error("Invalid response format");
+    }
+
+    return data;
   } catch (error) {
     console.error("Error fetching token usage:", error);
-    // Return default data with 0 usage to prevent UI errors
-    return { usage: 0, limit: 0, percentage_used: 0 };
+    // Return a safe default that indicates an error state
+    return {
+      usage: 0,
+      limit: 0,
+      percentage_used: 0,
+    };
   }
 }
 

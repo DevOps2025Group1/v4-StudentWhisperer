@@ -62,21 +62,38 @@ class DatabaseClient:
 
         return Student(student_id, name, email, courses, program)
 
-    def add_new_student(self, name: str, email: str, password: str) -> Student:
-        """Add a new student to the database."""
-        query = """
-        INSERT INTO dbo.Student (name, email, password)
-        OUTPUT INSERTED.id
-        VALUES (?, ?, ?);
+    def add_new_student(
+        self, name: str, email: str, password_hash: str = None
+    ) -> Student:
         """
+        Add a new student to the database. Password hash is optional for SSO users.
+        """
+        try:
+            # Check if a student with this email already exists
+            if self.email_already_exist(email):
+                raise ValueError(f"Student with email {email} already exists")
 
-        with self.conn.cursor() as cursor:
-            cursor.execute(query, (name, email, password))
-            student_id = cursor.fetchone()[0]
-            cursor.commit()
+            # Insert into Student table with possibly null password for SSO users
+            query = """
+            INSERT INTO dbo.Student (name, email, password)
+            VALUES (?, ?, ?);
+            """
 
-        self.add_demo_student_data(student_id)
-        return Student(student_id, name, email, courses=[], program={})
+            with self.conn.cursor() as cursor:
+                cursor.execute(query, (name, email, password_hash))
+                student_id = cursor.execute("SELECT SCOPE_IDENTITY();").fetchval()
+                cursor.commit()
+
+                # Create empty initial data
+                empty_courses = []
+                empty_program = {}
+
+                # Create and return a new Student object
+                return Student(student_id, name, email, empty_courses, empty_program)
+
+        except Exception as e:
+            print(f"Error adding new student: {e}")
+            raise
 
     def add_demo_student_data(self, student_id: int):
         """Connect demo courses and grades to the specified student."""
@@ -378,4 +395,119 @@ class DatabaseClient:
             return affected_rows > 0
         except Exception as e:
             print(f"Error updating password: {e}")
+            return False
+
+    def get_student_id_by_email(self, email: str) -> int:
+        """
+        Get a student's ID by their email address
+        """
+        try:
+            # Get student ID from Student table
+            query = "SELECT id FROM dbo.Student WHERE email = ?;"
+            with self.conn.cursor() as cursor:
+                cursor.execute(query, (email,))
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            print(f"Error getting student ID by email: {e}")
+            return None
+
+    def get_cached_token_usage(self, student_id: int):
+        """Get cached token usage data for an SSO user"""
+        try:
+            # Check if we have a token_usage_cache table
+            check_query = """
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TokenUsageCache')
+            BEGIN
+                CREATE TABLE TokenUsageCache (
+                    student_id INT NOT NULL,
+                    usage INT NOT NULL,
+                    limit_value INT NOT NULL,
+                    percentage_used FLOAT NOT NULL,
+                    last_updated DATETIME DEFAULT GETDATE(),
+                    PRIMARY KEY (student_id)
+                );
+            END
+            """
+            with self.conn.cursor() as cursor:
+                cursor.execute(check_query)
+                cursor.commit()
+
+            # Get cached data if it exists and is less than 5 minutes old
+            query = """
+            SELECT usage, limit_value, percentage_used
+            FROM TokenUsageCache
+            WHERE student_id = ?
+            AND last_updated >= DATEADD(MINUTE, -5, GETDATE());
+            """
+            with self.conn.cursor() as cursor:
+                cursor.execute(query, (student_id,))
+                result = cursor.fetchone()
+
+                if result:
+                    return {
+                        "usage": result[0],
+                        "limit": result[1],
+                        "percentage_used": result[2],
+                    }
+                return None
+
+        except Exception as e:
+            print(f"Error getting cached token usage: {e}")
+            return None
+
+    def cache_token_usage(self, student_id: int, usage_data: dict):
+        """Cache token usage data for an SSO user"""
+        try:
+            # First ensure the table exists
+            check_query = """
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TokenUsageCache')
+            BEGIN
+                CREATE TABLE TokenUsageCache (
+                    student_id INT NOT NULL,
+                    usage INT NOT NULL,
+                    limit_value INT NOT NULL,
+                    percentage_used FLOAT NOT NULL,
+                    last_updated DATETIME DEFAULT GETDATE(),
+                    PRIMARY KEY (student_id)
+                );
+            END
+            """
+
+            # Then upsert the data
+            upsert_query = """
+            MERGE TokenUsageCache AS target
+            USING (SELECT ? as student_id, ? as usage, ? as limit_value, ? as percentage_used) AS source
+            ON (target.student_id = source.student_id)
+            WHEN MATCHED THEN
+                UPDATE SET
+                    usage = source.usage,
+                    limit_value = source.limit_value,
+                    percentage_used = source.percentage_used,
+                    last_updated = GETDATE()
+            WHEN NOT MATCHED THEN
+                INSERT (student_id, usage, limit_value, percentage_used)
+                VALUES (source.student_id, source.usage, source.limit_value, source.percentage_used);
+            """
+
+            with self.conn.cursor() as cursor:
+                # Ensure table exists
+                cursor.execute(check_query)
+                cursor.commit()
+
+                # Insert/update the data
+                cursor.execute(
+                    upsert_query,
+                    (
+                        student_id,
+                        usage_data["usage"],
+                        usage_data["limit"],
+                        usage_data["percentage_used"],
+                    ),
+                )
+                cursor.commit()
+
+            return True
+        except Exception as e:
+            print(f"Error caching token usage: {e}")
             return False

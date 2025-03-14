@@ -1,4 +1,4 @@
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, make_response
 import jwt
 import requests
 import os
@@ -246,13 +246,27 @@ def exchange_azure_token(azure_token=None):
 
         # Verify the Azure token
         user_info = verify_azure_token(azure_token)
-
         if isinstance(user_info, tuple):  # Error response
             return user_info
 
         # Extract user information
         user_email = user_info.get("email", "unknown@example.com")
         user_name = user_info.get("name", "Azure User")
+
+        # Import DatabaseClient here to avoid circular imports
+        import clients.database_client as database_client
+
+        db = database_client.DatabaseClient()
+
+        # Check if user exists, if not create them
+        student_id = None
+        if db.email_already_exist(user_email):
+            # Get existing student info
+            student_id = db.get_student_id_by_email(user_email)
+        else:
+            # Create new student without password for SSO users
+            student = db.add_new_student(user_name, user_email, None)
+            student_id = student.student_id
 
         # Generate our application token
         token_expiry = datetime.utcnow() + timedelta(hours=24)
@@ -267,10 +281,27 @@ def exchange_azure_token(azure_token=None):
             algorithm="HS256",
         )
 
-        return {
-            "token": app_token,
-            "user": {"email": user_email, "name": user_name, "auth_source": "azure_ad"},
-        }
+        # Create response with token and user info
+        response = make_response(
+            jsonify(
+                {
+                    "token": app_token,
+                    "user": {
+                        "email": user_email,
+                        "name": user_name,
+                        "auth_source": "azure_ad",
+                        "student_id": student_id,
+                    },
+                }
+            )
+        )
+
+        # Set student_id cookie
+        response.set_cookie(
+            "student_id", str(student_id), httponly=True, samesite="Lax", secure=False
+        )
+
+        return response
 
     except Exception as e:
         logging.error(f"Token exchange error: {str(e)}")

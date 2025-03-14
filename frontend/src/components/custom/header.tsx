@@ -41,7 +41,7 @@ export const Header = ({
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-  const { tokenUsage, isLoading: isLoadingTokens } = useTokenUsage();
+  const { tokenUsage, isLoading: isLoadingTokens, error } = useTokenUsage();
   const { isDarkMode, toggleTheme } = useTheme();
 
   // Check if current path is chat page
@@ -49,6 +49,11 @@ export const Header = ({
 
   // Load student data if the user is authenticated
   useEffect(() => {
+    // Skip if we're in the process of logging out or if user is null
+    if (localStorage.getItem("loggingOut") === "true" || !user) {
+      return;
+    }
+
     const authUser = localStorage.getItem("auth_user");
     if (authUser && !studentInfo && user) {
       try {
@@ -198,29 +203,40 @@ export const Header = ({
     return "User";
   };
 
-  // Format the token usage for display
+  // Format the token usage for display with error handling
   const formatTokenUsage = () => {
+    if (error) return "Error loading usage";
     if (!tokenUsage) return "Loading...";
-    const { usage, limit, percentage_used } = tokenUsage;
-    return `${usage.toLocaleString()} / ${limit.toLocaleString()} tokens (${percentage_used.toFixed(
+    const { usage, limit } = tokenUsage;
+    if (usage === 0 && limit === 0) return "Usage data unavailable";
+    return `${usage.toLocaleString()} / ${limit.toLocaleString()} tokens (${tokenUsage.percentage_used.toFixed(
       1
     )}%)`;
   };
 
-  // Determine token status
+  // Determine token status with error handling
   const getTokenStatus = () => {
-    if (!tokenUsage) return { isLow: false, isExhausted: false };
+    if (!tokenUsage || tokenUsage.limit === 0) {
+      return { isLow: false, isExhausted: false, hasError: error !== null };
+    }
     const { percentage_used } = tokenUsage;
     return {
       isLow: percentage_used >= 80 && percentage_used < 100,
       isExhausted: percentage_used >= 100,
+      hasError: false,
     };
   };
 
-  const { isLow, isExhausted } = getTokenStatus();
+  const { isLow, isExhausted, hasError } = getTokenStatus();
 
   // Get appropriate status color for the progress bar
   const getProgressBarClasses = () => {
+    if (hasError) {
+      return {
+        bg: "bg-slate-200 dark:bg-slate-800",
+        indicator: "bg-red-600/50 dark:bg-red-500/50",
+      };
+    }
     if (isExhausted) {
       return {
         bg: "bg-red-100 dark:bg-red-950/50",
@@ -271,9 +287,7 @@ export const Header = ({
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs font-medium">
-                      Monthly Token Usage: {formatTokenUsage()}
-                    </p>
+                    <p className="text-xs font-medium">{formatTokenUsage()}</p>
                     {isExhausted && (
                       <p className="text-xs text-red-500 font-medium mt-1">
                         You have reached your monthly token limit
@@ -282,6 +296,11 @@ export const Header = ({
                     {isLow && !isExhausted && (
                       <p className="text-xs text-amber-500 font-medium mt-1">
                         You are running low on tokens
+                      </p>
+                    )}
+                    {hasError && (
+                      <p className="text-xs text-red-500 font-medium mt-1">
+                        Error loading token usage
                       </p>
                     )}
                   </TooltipContent>

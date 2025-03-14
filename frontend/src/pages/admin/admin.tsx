@@ -95,12 +95,16 @@ export function Admin() {
       toast.error("Please enter a valid token limit (positive number)");
       return;
     }
-
     try {
       const result = await setTokenLimit(Number(newGlobalLimit));
       if (result && result.status === "success") {
         toast.success("Token limit updated successfully");
         setTokenLimitData(result);
+
+        // Also refresh the token usage data to reflect the new limit
+        // without requiring a tab change or manual refresh
+        const usageData = await fetchAdminTokenUsage(year, month);
+        setTokenUsageData(usageData);
       } else {
         toast.error("Failed to update token limit");
       }

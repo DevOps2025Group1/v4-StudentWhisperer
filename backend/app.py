@@ -207,24 +207,16 @@ def logout():
 @app.route("/api/auth/azure-token", methods=["POST"])
 def azure_login():
     """Exchange an Azure AD token for an application token"""
-
     result = exchange_azure_token(
         None
     )  # Token is extracted from the header in the function
 
-    # If result is a tuple, it's an error response
-    if isinstance(result, tuple):
+    # If it's a tuple or not a response object, it's an error response
+    if isinstance(result, tuple) or not hasattr(result, "headers"):
         return result
 
-    # Success response with token and user info
-    return jsonify(
-        {
-            "status": "success",
-            "message": "Azure AD authentication successful",
-            "token": result["token"],
-            "user": result["user"],
-        }
-    )
+    # The successful response now includes the cookie, so we can return it directly
+    return result
 
 
 @app.route("/api/chat", methods=["POST"])
@@ -359,7 +351,16 @@ def get_student_courses():
     try:
         student_id = request.cookies.get("student_id")
         if not student_id:
-            return jsonify({"error": "Email parameter is required"}), 400
+            return (
+                jsonify({"error": "Authentication required. Please log in again."}),
+                401,
+            )
+
+        try:
+            # Convert to integer to make sure it's valid
+            student_id = int(student_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid session. Please log in again."}), 401
 
         student_info = db.get_student_info(student_id)
         if not student_info:
@@ -397,7 +398,6 @@ def get_student_courses():
                 "grades": formatted_grades,
             }
         )
-
     except Exception as e:
         logging.error(f"Error fetching student courses: {e}")
         return (
@@ -417,10 +417,13 @@ def get_token_usage():
         if not student_id:
             return jsonify({"error": "User not authenticated"}), 401
 
-        # Get current month's usage for this user
-        current_usage = db.get_user_monthly_usage(student_id)
+        try:
+            student_id = int(student_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid student ID"}), 400
 
-        # Get the user's token limit
+        # Get current month's usage and cache it
+        current_usage = db.get_user_monthly_usage(student_id)
         user_limit = db.get_user_token_limit(student_id)
 
         # Calculate percentage used
@@ -428,17 +431,25 @@ def get_token_usage():
         if user_limit > 0:
             percentage_used = min(100, round((current_usage / user_limit) * 100, 1))
 
-        return jsonify(
-            {
-                "usage": current_usage,
-                "limit": user_limit,
-                "percentage_used": percentage_used,
-            }
-        )
+        response_data = {
+            "usage": current_usage,
+            "limit": user_limit,
+            "percentage_used": percentage_used,
+        }
+
+        # Set cache control headers to help prevent aggressive polling
+        response = jsonify(response_data)
+        response.headers["Cache-Control"] = "private, max-age=5"  # Cache for 5 seconds
+        return response
 
     except Exception as e:
-        logging.error(f"Error getting token usage: {e}")
-        return jsonify({"error": f"Server error: {str(e)}"}), 500
+        app.logger.error(f"Error getting token usage: {str(e)}")
+        return (
+            jsonify(
+                {"error": "Server error", "message": "Failed to fetch token usage"}
+            ),
+            500,
+        )
 
 
 @app.route("/api/admin/tokens/usage", methods=["GET"])
@@ -713,7 +724,3 @@ def update_password():
     except Exception as e:
         logging.error(f"Error updating password: {e}")
         return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
-
-
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
