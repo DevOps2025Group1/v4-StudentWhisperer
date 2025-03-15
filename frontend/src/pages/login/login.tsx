@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { loginRequest } from "@/config/msalConfig";
 
 interface LocationState {
   from?: string;
+  registrationEmail?: string;
+  message?: string;
 }
 
 export function Login() {
@@ -22,11 +24,32 @@ export function Login() {
   const locationState = location.state as LocationState;
   const from = locationState?.from || "/chat";
   const [formData, setFormData] = useState({
-    email: "",
+    email: locationState?.registrationEmail || "",
     password: "",
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    locationState?.message || null
+  );
+
+  // Clear success message after 10 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  // Clear location state after reading it
+  useEffect(() => {
+    if (locationState?.message || locationState?.registrationEmail) {
+      // Replace the current URL without the state to prevent showing the message on refresh
+      navigate(location.pathname, { replace: true });
+    }
+  }, [navigate, location.pathname, locationState]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -79,7 +102,6 @@ export function Login() {
         // Store the authentication token and user info
         const { token, user } = result.data;
         login(token, user);
-
         // Redirect based on user role
         navigate(getRedirectPath(user));
       } else {
@@ -112,7 +134,6 @@ export function Login() {
         // Store the authentication token and user info
         const { token, user } = result.data;
         login(token, user);
-
         // Redirect based on user role
         navigate(getRedirectPath(user));
       } else {
@@ -158,6 +179,31 @@ export function Login() {
               Sign in to your Student Whisperer account
             </p>
           </div>
+
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-green-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium">{successMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Card className="p-6 shadow-lg">
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Standard login form fields */}
@@ -191,13 +237,11 @@ export function Login() {
                     <p className="text-xs text-red-500">{errors.password}</p>
                   )}
                 </div>
-
                 {errors.form && (
                   <p className="text-sm text-red-500 text-center">
                     {errors.form}
                   </p>
                 )}
-
                 <Button
                   type="submit"
                   className="w-full"
@@ -206,7 +250,6 @@ export function Login() {
                   {isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>
               </div>
-
               <div className="relative flex items-center py-1">
                 <div className="flex-grow border-t border-muted"></div>
                 <span className="flex-shrink mx-3 text-xs text-muted-foreground">
@@ -214,7 +257,6 @@ export function Login() {
                 </span>
                 <div className="flex-grow border-t border-muted"></div>
               </div>
-
               <div className="space-y-2">
                 <Button
                   type="button"
@@ -237,7 +279,6 @@ export function Login() {
                   </svg>
                   Sign in with Microsoft
                 </Button>
-
                 <Button
                   type="button"
                   variant="outline"
@@ -248,7 +289,6 @@ export function Login() {
                   Demo Login (No Account Required)
                 </Button>
               </div>
-
               <div className="pt-3 mt-2 border-t border-border text-center text-sm">
                 <p className="pt-2">
                   <span className="text-muted-foreground">

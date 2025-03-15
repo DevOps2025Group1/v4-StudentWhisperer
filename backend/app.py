@@ -88,42 +88,23 @@ def register():
     # Hash the password before storing
     hashed_password = generate_password_hash(data.get("password"))
 
+    # Add the new user to the database
     student = db.add_new_student(name, email, hashed_password)
 
-    # Generate JWT token, similar to login endpoint
-    token_expiry = datetime.now() + timedelta(hours=24)
-    token = jwt.encode(
-        {"email": email, "name": name, "exp": token_expiry},
-        app.config["SECRET_KEY"],
-        algorithm="HS256",
-    )
-
-    response = make_response(
+    # Return success response without token or setting cookies
+    return (
         jsonify(
             {
                 "status": "success",
                 "message": "User registered successfully",
-                "token": token,
                 "user": {
                     "email": student.email,
                     "name": student.name,
-                    "student_id": student.student_id,
                 },
             }
         ),
         201,
     )
-
-    # Set user_id in http-only cookie
-    response.set_cookie(
-        "student_id",
-        str(student.student_id),
-        httponly=True,
-        samesite="Lax",
-        secure=False,
-    )
-
-    return response
 
 
 @app.route("/api/auth/login", methods=["POST"])
