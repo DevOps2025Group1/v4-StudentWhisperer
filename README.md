@@ -16,16 +16,19 @@ StudentWhisperer is an integrated platform designed to enhance the educational e
 ## Features
 
 - **AI Chatbot**
+
   - Natural language processing to answer student questions
   - Context-aware responses based on your academic profile
   - Ability to provide academic guidance and explain concepts
 
 - **Student Information System**
+
   - View course enrollments and grades
   - Track progress toward degree completion
   - Access academic records and feedback
 
 - **User Management**
+
   - Secure authentication with JWT tokens
   - Profile management (update email, password)
   - Microsoft Azure AD Single Sign-On integration
@@ -40,9 +43,9 @@ StudentWhisperer is an integrated platform designed to enhance the educational e
 - **Backend**: Python, Flask
 - **AI Integration**: Azure OpenAI Services
 - **Search**: Azure Cognitive Search
-- **Database**: SQL Server
+- **Database**: SQL Server, Azure SQL
 - **Authentication**: JWT tokens, Azure AD integration
-- **Deployment**: Docker, Docker Compose
+- **Deployment**: Docker, Docker Compose, Azure Container Apps
 
 ## Getting Started
 
@@ -55,12 +58,14 @@ StudentWhisperer is an integrated platform designed to enhance the educational e
 ### Running with Docker
 
 1. Clone the repository
+
 ```bash
 git clone git@github.com:DevOps2025Group1/v4-StudentWhisperer.git
 cd v4-StudentWhisperer
 ```
 
 2. Start the application using Docker Compose
+
 ```bash
 docker-compose up
 ```
@@ -72,16 +77,19 @@ docker-compose up
 #### Frontend
 
 1. Navigate to the frontend directory
+
 ```bash
 cd frontend
 ```
 
 2. Install dependencies
+
 ```bash
 npm install
 ```
 
 3. Start the development server
+
 ```bash
 npm run dev
 ```
@@ -89,28 +97,33 @@ npm run dev
 #### Backend
 
 1. Navigate to the backend directory
+
 ```bash
 cd backend
 ```
 
 2. Create a Python virtual environment
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 4. Set up environment variables (create a .env file based on .env.sample)
+
 ```bash
 cp .env.sample .env
 # Edit the .env file with your configurations
 ```
 
 5. Start the Flask server
+
 ```bash
 python app.py
 ```
@@ -146,6 +159,7 @@ sql-password=""
 ```
 
 These environment variables are used for:
+
 - Connecting to Azure OpenAI for the chatbot functionality
 - Setting up Azure Cognitive Search for information retrieval
 - Connecting to the SQL database for student information
