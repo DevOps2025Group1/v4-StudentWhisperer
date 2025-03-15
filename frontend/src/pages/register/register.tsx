@@ -6,11 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Header } from "@/components/custom/header";
 import { registerUser } from "@/services/api";
-import { useAuth } from "@/context/AuthContext";
 
 export function Register() {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -19,6 +17,7 @@ export function Register() {
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -79,11 +78,19 @@ export function Register() {
       const result = await registerUser({ name, email, password });
 
       if (result.success) {
-        // Registration successful - store auth token and user info
-        const { token, user } = result.data;
-        login(token, user);
-        // Redirect to chat page
-        navigate("/chat");
+        // Registration successful - show success message and prepare to redirect
+        setRegistrationSuccess(true);
+
+        // Redirect to login page after a short delay
+        setTimeout(() => {
+          navigate("/login", {
+            state: {
+              registrationEmail: email,
+              message:
+                "Registration successful! Please log in with your new account.",
+            },
+          });
+        }, 2000);
       } else {
         // Handle registration error
         setErrors({
@@ -114,94 +121,129 @@ export function Register() {
           </div>
 
           <Card className="p-6 shadow-lg">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={errors.name ? "border-red-500" : ""}
-                  placeholder="John Doe"
-                />
-                {errors.name && (
-                  <p className="text-xs text-red-500">{errors.name}</p>
-                )}
+            {registrationSuccess ? (
+              <div className="text-center py-8 space-y-4">
+                <div className="mx-auto rounded-full bg-green-100 w-12 h-12 flex items-center justify-center mb-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-green-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-medium text-green-600">
+                  Registration Successful!
+                </h3>
+                <p className="text-gray-600">
+                  Your account has been created. Redirecting you to the login
+                  page...
+                </p>
+                <div className="animate-pulse text-sm text-gray-400">
+                  Please wait
+                </div>
               </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className={errors.name ? "border-red-500" : ""}
+                    placeholder="John Doe"
+                  />
+                  {errors.name && (
+                    <p className="text-xs text-red-500">{errors.name}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={errors.email ? "border-red-500" : ""}
-                  placeholder="john.doe@example.com"
-                />
-                {errors.email && (
-                  <p className="text-xs text-red-500">{errors.email}</p>
-                )}
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={errors.email ? "border-red-500" : ""}
+                    placeholder="john.doe@example.com"
+                  />
+                  {errors.email && (
+                    <p className="text-xs text-red-500">{errors.email}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={errors.password ? "border-red-500" : ""}
-                />
-                {errors.password && (
-                  <p className="text-xs text-red-500">{errors.password}</p>
-                )}
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={errors.password ? "border-red-500" : ""}
+                  />
+                  {errors.password && (
+                    <p className="text-xs text-red-500">{errors.password}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={errors.confirmPassword ? "border-red-500" : ""}
-                />
-                {errors.confirmPassword && (
-                  <p className="text-xs text-red-500">
-                    {errors.confirmPassword}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={errors.confirmPassword ? "border-red-500" : ""}
+                  />
+                  {errors.confirmPassword && (
+                    <p className="text-xs text-red-500">
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+
+                {errors.form && (
+                  <p className="text-sm text-red-500 text-center">
+                    {errors.form}
                   </p>
                 )}
-              </div>
 
-              {errors.form && (
-                <p className="text-sm text-red-500 text-center">
-                  {errors.form}
-                </p>
-              )}
-
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Creating Account..." : "Create Account"}
-              </Button>
-
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">
-                  Already have an account?{" "}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => navigate("/login")}
-                  className="text-primary hover:underline focus:outline-none"
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
                 >
-                  Log in
-                </button>
-              </div>
-            </form>
+                  {isSubmitting ? "Creating Account..." : "Create Account"}
+                </Button>
+
+                <div className="text-center text-sm">
+                  <span className="text-muted-foreground">
+                    Already have an account?{" "}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/login")}
+                    className="text-primary hover:underline focus:outline-none"
+                  >
+                    Log in
+                  </button>
+                </div>
+              </form>
+            )}
           </Card>
         </div>
       </div>
