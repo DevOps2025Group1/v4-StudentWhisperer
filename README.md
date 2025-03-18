@@ -2,7 +2,10 @@
 
 A modern educational platform that combines student information management with AI-powered assistance.
 
-![StudentWhisperer Demo](demo/image.png)
+
+https://github.com/user-attachments/assets/711eda64-5350-469d-9d95-d4b606563805
+
+
 
 ## Overview
 
